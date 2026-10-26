@@ -10,4 +10,3 @@ dist/
 
 # Ephemeral local deployment records (fresh `hardhat node` = fresh address)
 deployments/hardhatLocal.json
-deployments/sepolia.json

@@ -7,11 +7,13 @@
   "scripts": {
     "compile": "hardhat compile",
     "test": "hardhat test",
+    "chain": "hardhat node",
     "node": "hardhat node",
     "deploy": "hardhat run scripts/deploy.ts --network hardhatLocal",
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
-    "grant-verifier": "tsx scripts/grant-verifier.ts",
-    "chain:report": "tsx scripts/chain-report.ts",
+    "grant-verifier": "hardhat run scripts/grant-verifier.ts --network hardhatLocal",
+    "deploy:grant-verifier:sepolia": "hardhat run scripts/grant-verifier.ts --network sepolia",
+    "report": "hardhat run scripts/chain-report.ts --network hardhatLocal",
     "sync-abi": "tsx scripts/sync-abi.ts",
     "typecheck": "tsc --noEmit",
     "clean": "rimraf artifacts cache types dist"
