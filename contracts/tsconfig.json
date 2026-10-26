@@ -1,0 +1,23 @@
+{
+  "compilerOptions": {
+    "target": "ES2022",
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "lib": ["ES2022"],
+    "types": ["node", "mocha"],
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "noEmit": true,
+    "esModuleInterop": true,
+    "forceConsistentCasingInFileNames": true,
+    "skipLibCheck": true,
+    "resolveJsonModule": true
+  },
+  "include": [
+    "./scripts/**/*.ts",
+    "./hardhat.config.ts",
+    "./test/**/*.ts",
+    "./types/ethers-contracts/hardhat.d.ts"
+  ],
+  "exclude": ["artifacts", "cache", "dist"]
+}
