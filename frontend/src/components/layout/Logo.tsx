@@ -19,31 +19,31 @@ export function BrandMark({ className }: { className?: string }) {
           <stop offset="0.52" stopColor="#B91C3B" />
           <stop offset="1" stopColor="#831B32" />
         </linearGradient>
-        <linearGradient id="bb-mark-shine" x1="10" y1="6" x2="28" y2="22" gradientUnits="userSpaceOnUse">
-          <stop stopColor="#fff" stopOpacity="0.3" />
-          <stop offset="1" stopColor="#fff" stopOpacity="0" />
-        </linearGradient>
       </defs>
       <rect width="40" height="40" rx="12" fill="url(#bb-mark-face)" />
       <path
-        d="M20 8.5c4.55 5.4 7.35 9.05 7.35 12.55a7.35 7.35 0 0 1-14.7 0c0-3.5 2.8-7.15 7.35-12.55Z"
+        d="M20 7.5c4.2 5.2 9 10.8 9 15.8a9 9 0 1 1-18 0c0-5 4.8-10.6 9-15.8Z"
         fill="#fff"
       />
       <path
-        d="M12.2 25.3c2.35-2.2 5-3.3 7.8-3.3s5.45 1.1 7.8 3.3"
+        d="M12.8 22h14.4"
         stroke="url(#bb-mark-face)"
-        strokeWidth="2.1"
+        strokeWidth="2.3"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15.2 22.2v3.3M24.8 22.2v3.3"
+        stroke="url(#bb-mark-face)"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+      />
+      <path
+        d="M15.2 25.5c1.3 2.9 2.9 4.4 4.8 4.4s3.5-1.5 4.8-4.4"
+        stroke="url(#bb-mark-face)"
+        strokeWidth="2"
         strokeLinecap="round"
         fill="none"
       />
-      <path
-        d="M14.9 22.6v4.4M25.1 22.6v4.4"
-        stroke="url(#bb-mark-face)"
-        strokeWidth="1.7"
-        strokeLinecap="round"
-      />
-      <path d="M20 15.4v5.2M17.4 18h5.2" stroke="#B91C3B" strokeWidth="1.8" strokeLinecap="round" />
-      <path d="M8 12c4-4.6 9.5-7 16-6.4" stroke="url(#bb-mark-shine)" strokeWidth="2" strokeLinecap="round" fill="none" />
     </svg>
   );
 }

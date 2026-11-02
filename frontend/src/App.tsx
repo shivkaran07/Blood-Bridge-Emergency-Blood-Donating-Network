@@ -10,21 +10,47 @@ import { AppShell } from './components/layout/AppShell';
 import { PageLoader } from './components/ui/States';
 
 import { LandingPage } from './pages/public/LandingPage';
-import { HowItWorksPage } from './pages/public/HowItWorksPage';
-import { AboutPage } from './pages/public/AboutPage';
-import { FaqPage } from './pages/public/FaqPage';
-import { LoginPage } from './pages/public/LoginPage';
-import { RegisterPage } from './pages/public/RegisterPage';
-import { ForgotPasswordPage } from './pages/public/ForgotPasswordPage';
-import { ResetPasswordPage } from './pages/public/ResetPasswordPage';
-import { PrivacyPage } from './pages/public/PrivacyPage';
-import { TermsPage } from './pages/public/TermsPage';
-import { UnauthorizedPage } from './pages/public/UnauthorizedPage';
-import { NotFoundPage } from './pages/public/NotFoundPage';
 
-// Secondary authenticated routes are split out of the public bundle. The
-// landing page, auth flow and public information pages stay eager so the first
-// paint never waits on a workspace chunk.
+// Load secondary public routes only when visited so the homepage's first
+// download contains neither form/auth code nor informational pages.
+const HowItWorksPage = lazy(() =>
+  import('./pages/public/HowItWorksPage').then((module) => ({ default: module.HowItWorksPage })),
+);
+const AboutPage = lazy(() =>
+  import('./pages/public/AboutPage').then((module) => ({ default: module.AboutPage })),
+);
+const FaqPage = lazy(() =>
+  import('./pages/public/FaqPage').then((module) => ({ default: module.FaqPage })),
+);
+const LoginPage = lazy(() =>
+  import('./pages/public/LoginPage').then((module) => ({ default: module.LoginPage })),
+);
+const RegisterPage = lazy(() =>
+  import('./pages/public/RegisterPage').then((module) => ({ default: module.RegisterPage })),
+);
+const ForgotPasswordPage = lazy(() =>
+  import('./pages/public/ForgotPasswordPage').then((module) => ({
+    default: module.ForgotPasswordPage,
+  })),
+);
+const ResetPasswordPage = lazy(() =>
+  import('./pages/public/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })),
+);
+const PrivacyPage = lazy(() =>
+  import('./pages/public/PrivacyPage').then((module) => ({ default: module.PrivacyPage })),
+);
+const TermsPage = lazy(() =>
+  import('./pages/public/TermsPage').then((module) => ({ default: module.TermsPage })),
+);
+const UnauthorizedPage = lazy(() =>
+  import('./pages/public/UnauthorizedPage').then((module) => ({
+    default: module.UnauthorizedPage,
+  })),
+);
+const NotFoundPage = lazy(() =>
+  import('./pages/public/NotFoundPage').then((module) => ({ default: module.NotFoundPage })),
+);
+
 const DashboardPage = lazy(() =>
   import('./pages/app/DashboardPage').then((module) => ({ default: module.DashboardPage })),
 );

@@ -15,6 +15,7 @@ This pass refined the existing BloodBridge experience without replacing its crim
 - Changed verification wallet-status failures to show an explicit error and retry action instead of implying that no wallet is bound.
 - Added regression coverage for the tagline and single-page pagination.
 - Captured and inspected homepage screenshots for desktop and mobile in both themes.
+- Deferred secondary public pages until navigation, loaded the Supabase SDK asynchronously, and kept form-validation libraries out of the homepage's initial module-preload set. The production entry now preloads roughly 40% fewer compressed bytes than the earlier build; individual chunk transfer and signed-in API latency still depend on the user's network and hosted services.
 
 ### Files changed in this refinement
 
@@ -24,6 +25,10 @@ This pass refined the existing BloodBridge experience without replacing its crim
 - `frontend/src/pages/app/DashboardPage.tsx`
 - `frontend/src/components/ui/Pagination.tsx`
 - `frontend/src/pages/app/BlockchainStatusPage.tsx`
+- `frontend/src/App.tsx`
+- `frontend/src/context/AuthContext.tsx`
+- `frontend/src/lib/supabase.ts`
+- `frontend/vite.config.ts`
 - `frontend/src/tests/routing.test.tsx`
 - `frontend/src/tests/ui-primitives.test.tsx`
 - `IMPLEMENTATION_COMPLETION_REPORT.md`
@@ -62,13 +67,18 @@ All four images were opened and visually inspected. They show the coordination-f
 
 | Check | Result |
 |---|---|
+| Backend tests | **65 passed across 9 files** |
 | Frontend tests | **78 passed across 12 files** |
-| Frontend TypeScript check | Passed |
-| Frontend production build | Passed; Vite reported no build warnings |
+| Contract tests | **25 passed** |
+| Backend, frontend, and contract TypeScript checks | Passed |
+| Backend and frontend production builds | Passed; Vite reported no build warnings |
+| Contract compile | Passed |
+| Public route smoke test | Homepage, sign-in, How it works, and FAQ rendered successfully; no horizontal overflow |
+| Homepage initial bundle | Approximately 40% fewer compressed bytes in the production preload set than the prior build |
 | Responsive browser checks | No horizontal overflow in the tested public/authentication-page combinations |
 | Protected-route checks | Redirected to sign-in; not authenticated visual tests |
 
-Backend, contract, and hosted-environment checks were not rerun as part of this frontend-focused refinement. No hosted Supabase migration was applied.
+Hosted-environment checks were not performed, and no hosted Supabase migration was applied.
 
 ## Remaining work and limitations
 

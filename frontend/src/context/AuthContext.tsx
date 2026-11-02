@@ -10,7 +10,8 @@ import {
 } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { api, errorMessage } from '../lib/api';
-import { supabase } from '../lib/supabase';
+import { getSupabaseClient } from '../lib/supabase';
+import { supabaseConfigured } from '../lib/env';
 import type { Me } from '../types/api';
 
 export type AuthStatus =
@@ -65,7 +66,7 @@ function friendlyAuthError(message: string): string {
 }
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [status, setStatus] = useState<AuthStatus>(supabase ? 'loading' : 'unconfigured');
+  const [status, setStatus] = useState<AuthStatus>(supabaseConfigured ? 'loading' : 'unconfigured');
   const [session, setSession] = useState<Session | null>(null);
   const [me, setMe] = useState<Me | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -79,20 +80,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    if (!supabase) return;
+    if (!supabaseConfigured) return;
     let active = true;
+    let unsubscribe = () => {};
 
-    supabase.auth
-      .getSession()
-      .then(({ data, error: sessionError }) => {
+    void getSupabaseClient()
+      .then(async (supabase) => {
+        if (!active || !supabase) return;
+        const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
+          if (!active) return;
+          setSession(nextSession);
+          if (!nextSession) {
+            setMe(null);
+            setError(null);
+            setStatus('unauthenticated');
+          }
+        });
+        unsubscribe = () => data.subscription.unsubscribe();
+
+        const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
         if (!active) return;
         if (sessionError) {
           setError(sessionError.message);
           setStatus('error');
           return;
         }
-        setSession(data.session);
-        if (!data.session) setStatus('unauthenticated');
+        setSession(sessionData.session);
+        if (!sessionData.session) setStatus('unauthenticated');
       })
       .catch((cause: unknown) => {
         if (!active) return;
@@ -100,19 +114,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         setStatus('error');
       });
 
-    const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
-      if (!active) return;
-      setSession(nextSession);
-      if (!nextSession) {
-        setMe(null);
-        setError(null);
-        setStatus('unauthenticated');
-      }
-    });
-
     return () => {
       active = false;
-      data.subscription.unsubscribe();
+      unsubscribe();
     };
   }, []);
 
@@ -160,6 +164,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [token]);
 
   const signIn = useCallback(async (email: string, password: string) => {
+    const supabase = await getSupabaseClient();
     if (!supabase) {
       throw new Error('Supabase is not configured. Add the VITE_SUPABASE_* values to frontend/.env.');
     }
@@ -168,6 +173,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const reauthenticate = useCallback(async (password: string) => {
+    const supabase = await getSupabaseClient();
     if (!supabase || !session?.user.email) {
       throw new Error('Reauthentication is unavailable for this session.');
     }
@@ -181,6 +187,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [session?.user.email]);
 
   const signUp = useCallback(async (input: SignUpInput) => {
+    const supabase = await getSupabaseClient();
     if (!supabase) {
       throw new Error('Supabase is not configured. Add the VITE_SUPABASE_* values to frontend/.env.');
     }
@@ -200,16 +207,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const signOut = useCallback(async () => {
+    const supabase = await getSupabaseClient();
     if (supabase) {
       await supabase.auth.signOut();
     }
     setSession(null);
     setMe(null);
     setError(null);
-    setStatus(supabase ? 'unauthenticated' : 'unconfigured');
+    setStatus(supabaseConfigured ? 'unauthenticated' : 'unconfigured');
   }, []);
 
   const resetPassword = useCallback(async (email: string) => {
+    const supabase = await getSupabaseClient();
     if (!supabase) {
       throw new Error('Supabase is not configured. Add the VITE_SUPABASE_* values to frontend/.env.');
     }
@@ -220,6 +229,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const updatePassword = useCallback(async (password: string) => {
+    const supabase = await getSupabaseClient();
     if (!supabase) {
       throw new Error('Supabase is not configured. Add the VITE_SUPABASE_* values to frontend/.env.');
     }

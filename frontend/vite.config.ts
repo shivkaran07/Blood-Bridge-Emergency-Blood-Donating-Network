@@ -35,8 +35,6 @@ export default defineConfig({
           if (id.includes('react-router')) return 'react-router';
           // Lucide icons — large icon set
           if (id.includes('lucide-react')) return 'icons';
-          // React Hook Form + Zod
-          if (id.includes('react-hook-form') || id.includes('zod') || id.includes('@hookform')) return 'forms';
         },
       },
     },

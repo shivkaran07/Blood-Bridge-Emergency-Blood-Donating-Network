@@ -36,36 +36,36 @@ describe('public routing', () => {
     expect(screen.getByText(/illustrative interface sample/i)).toBeInTheDocument();
   });
 
-  it('serves the how-it-works page', () => {
+  it('serves the how-it-works page', async () => {
     renderAt('/how-it-works');
     expect(
-      screen.getByRole('heading', { name: /from an urgent request to a recorded decision/i }),
+      await screen.findByRole('heading', { name: /from an urgent request to a recorded decision/i }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: /2\. hospital review/i }),
+      await screen.findByRole('heading', { name: /2\. hospital review/i }),
     ).toBeInTheDocument();
   });
 
-  it('serves the FAQ page without claiming blockchain verification', () => {
+  it('serves the FAQ page without claiming blockchain verification', async () => {
     renderAt('/faq');
     expect(
-      screen.getByRole('heading', { name: /frequently asked questions/i }),
+      await screen.findByRole('heading', { name: /frequently asked questions/i }),
     ).toBeInTheDocument();
     expect(screen.queryByText(/blockchain verified/i)).not.toBeInTheDocument();
   });
 
-  it('serves the privacy and terms pages', () => {
+  it('serves the privacy and terms pages', async () => {
     const { unmount } = renderAt('/privacy');
-    expect(screen.getByRole('heading', { name: /privacy notice/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /privacy notice/i })).toBeInTheDocument();
     unmount();
 
     renderAt('/terms');
-    expect(screen.getByRole('heading', { name: /terms of use/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /terms of use/i })).toBeInTheDocument();
   });
 
-  it('renders a not-found page for an unknown public path', () => {
+  it('renders a not-found page for an unknown public path', async () => {
     renderAt('/this-page-does-not-exist');
-    expect(screen.getByRole('heading', { name: /this page does not exist/i })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /this page does not exist/i })).toBeInTheDocument();
     expect(screen.getByText('/this-page-does-not-exist')).toBeInTheDocument();
   });
 
