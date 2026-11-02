@@ -33,7 +33,7 @@ export function ActivityChart({ points }: { points: ActivityPoint[] }) {
                   title={`${point.responses} responses`}
                 />
               </div>
-              <span className="text-[0.65rem] font-medium uppercase tracking-wide text-ink-400">
+              <span className="text-[0.65rem] font-medium uppercase tracking-wide text-ink-500">
                 {label}
               </span>
             </div>
@@ -51,7 +51,7 @@ export function ActivityChart({ points }: { points: ActivityPoint[] }) {
         </span>
         <span className="ml-auto">Last {points.length} days</span>
       </div>
-      <p className="mt-2 text-xs text-ink-400">
+      <p className="mt-2 text-xs text-ink-500">
         From {formatDate(points[0]?.day)} to {formatDate(points[points.length - 1]?.day)}
       </p>
     </div>

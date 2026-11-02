@@ -1,4 +1,4 @@
-import { rateLimit, ipKeyGenerator, type RateLimitRequestHandler } from 'express-rate-limit';
+import { rateLimit, ipKeyGenerator, type RateLimitRequestHandler, type Store } from 'express-rate-limit';
 import type { AppConfig } from '../config/env.js';
 
 function rateLimitHandler(message: string) {
@@ -17,15 +17,24 @@ export interface RateLimiters {
   hospitalApply: RateLimitRequestHandler;
 }
 
+export type RateLimitStoreFactory = (prefix: string) => Store;
+
 /**
  * Rate limiters. The global limiter is per IP; write limiters are per
  * authenticated user once authentication has run.
  */
-export function createRateLimiters(config: AppConfig): RateLimiters {
+export function createRateLimiters(
+  config: AppConfig,
+  createStore?: RateLimitStoreFactory,
+): RateLimiters {
   const common = {
     standardHeaders: 'draft-7' as const,
     legacyHeaders: false,
     skip: () => !config.rateLimit.enabled,
+  };
+  const storeOptions = (prefix: string) => {
+    const sharedStore = createStore?.(prefix);
+    return sharedStore ? { store: sharedStore } : {};
   };
 
   const userKey = (req: { auth?: { user: { id: string } }; ip?: string }) =>
@@ -33,6 +42,7 @@ export function createRateLimiters(config: AppConfig): RateLimiters {
 
   const global = rateLimit({
     ...common,
+    ...storeOptions('global:'),
     windowMs: config.rateLimit.windowMs,
     limit: config.rateLimit.max,
     handler: rateLimitHandler('Too many requests. Please wait and try again.'),
@@ -40,6 +50,7 @@ export function createRateLimiters(config: AppConfig): RateLimiters {
 
   const write = rateLimit({
     ...common,
+    ...storeOptions('write:'),
     windowMs: config.rateLimit.windowMs,
     limit: config.rateLimit.writeMax,
     keyGenerator: userKey,
@@ -48,6 +59,7 @@ export function createRateLimiters(config: AppConfig): RateLimiters {
 
   const requestCreate = rateLimit({
     ...common,
+    ...storeOptions('request-create:'),
     windowMs: 60 * 60 * 1000,
     limit: config.rateLimit.requestCreateMax,
     keyGenerator: userKey,
@@ -58,6 +70,7 @@ export function createRateLimiters(config: AppConfig): RateLimiters {
 
   const responseCreate = rateLimit({
     ...common,
+    ...storeOptions('response-create:'),
     windowMs: 60 * 60 * 1000,
     limit: config.rateLimit.responseMax,
     keyGenerator: userKey,
@@ -66,6 +79,7 @@ export function createRateLimiters(config: AppConfig): RateLimiters {
 
   const hospitalApply = rateLimit({
     ...common,
+    ...storeOptions('hospital-apply:'),
     windowMs: 60 * 60 * 1000,
     limit: 5,
     keyGenerator: userKey,

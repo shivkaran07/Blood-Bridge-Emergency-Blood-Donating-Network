@@ -143,8 +143,7 @@ export function HospitalApplicationPage() {
         />
         <Alert variant="success" title="Approved hospital verifier">
           {me.hospitalProfile?.hospitalName ?? 'Your hospital'} can access the verification
-          queue. Verification decisions are database-backed in Part 1 and recorded in the audit
-          trail.
+          queue. Verification decisions are recorded in the application audit trail.
         </Alert>
         <div className="flex flex-wrap gap-2">
           <Link to="/app/hospital" className={buttonClasses('primary', 'md')}>
@@ -171,14 +170,14 @@ export function HospitalApplicationPage() {
       <PageHeader
         eyebrow="Hospital verifier"
         title={application ? 'Hospital verification application' : 'Apply as a hospital verifier'}
-        description="Institutional accounts are reviewed by an administrator. Approval grants database-backed request verification permissions only."
+        description="Institutional accounts are reviewed by an administrator. Approval grants request-review permissions only — never administrator or wallet privileges."
       />
 
       {application ? (
         <Card>
           <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
             <div className="flex items-start gap-3">
-              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-accent">
                 <Building2 className="size-5" aria-hidden="true" />
               </span>
               <div>
@@ -202,15 +201,15 @@ export function HospitalApplicationPage() {
                 <p className="mt-1 text-sm text-ink-500">
                   {application.city}, {application.area} · Reg. {application.registrationNumber}
                 </p>
-                <p className="mt-1 text-xs text-ink-400">
+                <p className="mt-1 text-xs text-ink-500">
                   Submitted {formatDateTime(application.createdAt)} · Updated{' '}
                   {formatDateTime(application.updatedAt)}
                 </p>
               </div>
             </div>
             <div className="rounded-lg bg-ink-50 px-3 py-2 text-xs text-ink-500">
-              <p className="font-semibold text-ink-700">Part 1 verification</p>
-              <p>Database-backed review only</p>
+              <p className="font-semibold text-ink-700">Review model</p>
+              <p>Recorded application decision</p>
             </div>
           </div>
 
@@ -234,8 +233,8 @@ export function HospitalApplicationPage() {
 
           {status === 'APPROVED' ? (
             <Alert variant="success" title="Approved" className="mt-4">
-              You can review requests in the verification queue. This approval is
-              database-backed; no blockchain transaction is created in Part 1.
+              You can review requests in the verification queue. This approval is an application
+              permission and does not by itself grant on-chain verifier rights.
             </Alert>
           ) : null}
         </Card>
@@ -248,7 +247,7 @@ export function HospitalApplicationPage() {
       )}
 
       {canResubmit ? (
-        <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.8fr)]">
+        <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.8fr)]">
           <SectionCard
             title={application ? 'Resubmit institutional details' : 'Institutional details'}
             description="All fields are required. Provide the information an administrator needs to verify your institution."
@@ -294,7 +293,7 @@ export function HospitalApplicationPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Contact phone" htmlFor="contactPhone" required error={errors.contactPhone?.message}>
                   <div className="relative">
-                    <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                    <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
                     <Input
                       id="contactPhone"
                       className="pl-9"
@@ -306,7 +305,7 @@ export function HospitalApplicationPage() {
                 </Field>
                 <Field label="Official email" htmlFor="officialEmail" required error={errors.officialEmail?.message}>
                   <div className="relative">
-                    <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                    <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
                     <Input
                       id="officialEmail"
                       className="pl-9"
@@ -323,7 +322,7 @@ export function HospitalApplicationPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="City" htmlFor="hospitalCity" required error={errors.city?.message}>
                   <div className="relative">
-                    <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                    <MapPin className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
                     <Input
                       id="hospitalCity"
                       className="pl-9"
@@ -349,7 +348,7 @@ export function HospitalApplicationPage() {
                   {...register('accuracyConfirmed')}
                 />
                 {errors.accuracyConfirmed?.message ? (
-                  <p className="mt-1.5 text-xs font-medium text-brand-700" role="alert">
+                  <p className="mt-1.5 text-xs font-medium text-brand-accent" role="alert">
                     {errors.accuracyConfirmed.message}
                   </p>
                 ) : null}
@@ -371,7 +370,7 @@ export function HospitalApplicationPage() {
           <aside className="space-y-4">
             <Card>
               <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-                <ClipboardCheck className="size-4 text-ink-400" aria-hidden="true" />
+                <ClipboardCheck className="size-4 text-ink-500" aria-hidden="true" />
                 Review process
               </h2>
               <ol className="mt-3 space-y-3 text-xs leading-relaxed text-ink-600">
@@ -389,15 +388,16 @@ export function HospitalApplicationPage() {
                 </li>
                 <li className="flex gap-2">
                   <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-ink-100 text-[0.65rem] font-bold">4</span>
-                  In Part 2, an authorized wallet transaction may add an on-chain anchor.
+                  In on-chain deployments, an authorized wallet may additionally anchor an opaque
+                  audit reference for the decision.
                 </li>
               </ol>
             </Card>
 
             <Alert variant="warning" title="What approval does not mean">
               Approval does not make you an administrator, does not verify every future request,
-              and does not create a blockchain transaction. It grants access to the application's
-              database-backed review queue.
+              and does not by itself grant wallet or blockchain rights. It grants access to the
+              application's review queue.
             </Alert>
 
             <Card>

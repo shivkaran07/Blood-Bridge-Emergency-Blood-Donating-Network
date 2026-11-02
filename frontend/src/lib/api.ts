@@ -6,6 +6,7 @@ import type {
   ApiErrorPayload,
   AuditEvent,
   BlockchainStatus,
+  BlockchainOperationRow,
   BloodGroup,
   BloodRequest,
   DashboardData,
@@ -21,11 +22,14 @@ import type {
   Paginated,
   Profile,
   RequestBlockchainRecord,
+  RequestDecisionResult,
   RequestHistoryEntry,
   RequestList,
   RequestPriority,
   RequestStatus,
   SuspiciousRequest,
+  WalletChallenge,
+  WalletStatus,
 } from '../types/api';
 
 export class ApiError extends Error {
@@ -189,6 +193,20 @@ export const api = {
   updateProfile: (token: string, input: ProfileInput) =>
     apiRequest<Profile>('/me', { method: 'PATCH', token, body: input }),
 
+  updateEmailNotifications: (token: string, enabled: boolean) =>
+    apiRequest<{ enabled: boolean }>('/me/email-notifications', {
+      method: 'PATCH',
+      token,
+      body: { enabled },
+    }),
+
+  anonymizeAccount: (token: string) =>
+    apiRequest<{ status: 'ANONYMIZED'; requestHistoryRetained: true }>('/me', {
+      method: 'DELETE',
+      token,
+      body: { confirmation: 'DELETE' },
+    }),
+
   getDonorProfile: (token: string, signal?: AbortSignal) =>
     apiRequest<DonorProfile>('/donor/profile', { token, signal }),
 
@@ -258,14 +276,14 @@ export const api = {
     apiRequest<BloodRequest>(`/requests/${id}/claim`, { method: 'POST', token }),
 
   verifyRequest: (token: string, id: string, reason?: string | null) =>
-    apiRequest<BloodRequest>(`/requests/${id}/verify`, {
+    apiRequest<RequestDecisionResult>(`/requests/${id}/verify`, {
       method: 'POST',
       token,
       body: { reason: reason ?? null },
     }),
 
   rejectRequest: (token: string, id: string, reason: string) =>
-    apiRequest<BloodRequest>(`/requests/${id}/reject`, {
+    apiRequest<RequestDecisionResult>(`/requests/${id}/reject`, {
       method: 'POST',
       token,
       body: { reason },
@@ -304,6 +322,41 @@ export const api = {
 
   blockchainStatus: (token: string, signal?: AbortSignal) =>
     apiRequest<BlockchainStatus>('/blockchain/status', { token, signal }),
+
+  prepareChainCompletion: (token: string, id: string) =>
+    apiRequest<RequestDecisionResult>(`/requests/${id}/chain-complete`, { method: 'POST', token }),
+
+  confirmAnchor: (token: string, operationId: string, transactionHash: string) =>
+    apiRequest<{ status: string; transactionHash: string | null; request: BloodRequest }>(
+      `/blockchain/operations/${operationId}/confirm`,
+      { method: 'POST', token, body: { transactionHash } },
+    ),
+
+  reconcileAnchor: (token: string, operationId: string) =>
+    apiRequest<{ status: string; transactionHash: string | null; request: BloodRequest }>(
+      `/blockchain/operations/${operationId}/reconcile`, { method: 'POST', token },
+    ),
+
+  blockchainOperations: (token: string, requestId: string, status?: string) =>
+    apiRequest<{ items: BlockchainOperationRow[]; total: number }>('/blockchain/operations', {
+      token, query: { requestId, status, limit: 50 },
+    }),
+
+  walletChallenge: (token: string, walletAddress: string) =>
+    apiRequest<WalletChallenge>('/wallet/challenge', {
+      method: 'POST', token, body: { walletAddress },
+    }),
+
+  verifyWallet: (token: string, message: string, signature: string) =>
+    apiRequest<{ walletAddress: string; chainId: number; verifiedAt: string }>('/wallet/verify', {
+      method: 'POST', token, body: { message, signature },
+    }),
+
+  walletStatus: (token: string) =>
+    apiRequest<WalletStatus>('/wallet/status', { token }),
+
+  unbindWallet: (token: string) =>
+    apiRequest<{ unbound: boolean }>('/wallet/binding', { method: 'DELETE', token }),
 
   hospitalApplication: (token: string, signal?: AbortSignal) =>
     apiRequest<HospitalProfile>('/hospital/application', { token, signal }),

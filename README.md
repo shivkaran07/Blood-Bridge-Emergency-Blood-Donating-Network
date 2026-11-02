@@ -1,6 +1,6 @@
 # BloodBridge
 
-**A Blockchain-Based Emergency Blood Donation and Verification Network — Part 1**
+**A Blockchain-Based Emergency Blood Donation and Verification Network — Educational prototype**
 
 BloodBridge is a working full-stack prototype that connects people requesting blood, volunteer
 donors, hospital verifiers and platform administrators. It provides registration and sign-in,
@@ -8,10 +8,11 @@ donor profiles, emergency requests with a validated lifecycle, exact-group match
 responses, database-backed hospital verification, administrator controls, in-app notifications,
 audit history and role-specific dashboards.
 
-> **Part 1 boundary.** Verification in this phase is **database-backed only**. No Solidity
-> contract is deployed, no wallet is connected and no blockchain transaction is created. The
-> schema, API and UI are prepared for an honest Part 2 integration. The application never labels
-> database verification as blockchain verification.
+> **Blockchain status.** The Solidity contract, local Hardhat setup, wallet challenge endpoints,
+> backend transaction/receipt validation, and the browser verification flow are implemented: the
+> request review screen prepares an anchor operation, and MetaMask submits and confirms it when
+> blockchain mode is enabled. What remains unverified is a live end-to-end run against a deployed
+> contract; no live contract or public testnet deployment is claimed.
 
 > **Not an emergency service.** BloodBridge does not dispatch help, guarantee blood availability,
 > assess donor eligibility or determine clinical compatibility. For immediate danger, call your
@@ -23,12 +24,13 @@ audit history and role-specific dashboards.
 
 | Area | Status |
 | --- | --- |
-| Backend API (`/api/v1`) | Implemented, typechecked, 24 integration/unit tests passing |
-| Frontend SPA | Implemented, typechecked, production build succeeds, 34 tests passing |
-| Database schema + RLS migrations | Implemented as version-controlled SQL |
+| Backend API (`/api/v1`) | Implemented, typechecked, **56 integration/unit tests passing** (46 pre-existing + 10 new canRespond regression tests) |
+| Frontend SPA | Implemented, typechecked, production build succeeds, **73 tests passing**; browser MetaMask flow implemented but no browser E2E test |
+| Database schema + RLS migrations | Implemented as version-controlled SQL (**six migrations**) |
 | Supabase Auth integration | Implemented in code; **not run against a live Supabase project** because no credentials were available |
 | Hosted Supabase migrations/RLS | **Not verified in this environment**; PGlite is used for automated tests |
-| Blockchain contract / wallet | **Not implemented — Part 2** |
+| Solidity / Hardhat / backend wallet and receipt checks | Implemented; 25 contract tests pass |
+| Browser MetaMask transaction flow | Implemented (prepare → sign → submit → confirm), not verified against a live local RPC or testnet |
 | Email / SMS / push delivery | **Not implemented**; in-app notifications only |
 
 See [`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md) for the detailed acceptance-criteria
@@ -39,7 +41,7 @@ checklist and known limitations, and [`docs/TESTING.md`](./docs/TESTING.md) for 
 ## 2. Features
 
 ### Public
-- Landing page with honest Part 1 messaging, request/donor calls to action, workflow explanation,
+- Landing page with request/donor calls to action, workflow explanation,
   trust and privacy sections, and FAQ.
 - `/how-it-works`, `/about`, `/faq`, `/privacy`, `/terms`, `/unauthorized`, 404.
 - Registration, sign-in and session persistence through Supabase Auth.
@@ -62,7 +64,7 @@ checklist and known limitations, and [`docs/TESTING.md`](./docs/TESTING.md) for 
 - Apply with institutional details; only an administrator can approve the application.
 - Approved verifiers receive a pending queue, request review page, decision reasons and review
   history.
-- Verification is explicitly database-backed in Part 1.
+- Verification can be database-backed by default or anchored on-chain when configured; browser wallet submission is wired into the review flow.
 
 ### Administrator
 - Aggregate operational statistics from the live database.
@@ -98,14 +100,14 @@ Express + TypeScript REST API  (/api/v1)
         |
         +--> Supabase PostgreSQL (pg connection, RLS as defence in depth)
         +--> audit + notification service
-        +--> blockchain integration interface (Part 2 scaffold only)
+        +--> ethers.js blockchain adapter (wallet-signed operations from the browser)
 ```
 
 - The browser uses the Supabase **publishable/anon** key only for authentication.
 - The backend verifies the access token with Supabase and then applies its own authorization.
 - The backend uses a server-side database connection and a service-role key that never reaches the
   browser. RLS still restricts direct browser table access.
-- Request, response, verification, audit and blockchain writes are backend-only.
+- Database writes are backend-only; on-chain anchor transactions are signed by the user's own wallet.
 
 More detail: [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md).
 
@@ -240,8 +242,11 @@ Backend variables:
 | `SUPABASE_URL` | Supabase project URL |
 | `SUPABASE_SERVICE_ROLE_KEY` | Server-only key; bypasses RLS |
 | `RATE_LIMIT_WINDOW_MS` / `RATE_LIMIT_MAX` / `WRITE_RATE_LIMIT_MAX` | Rate limits |
+| `REDIS_URL` | Required in production for shared rate limits; omit locally to use in-process memory storage. Redis client/store packages are included. |
+| `RESEND_API_KEY` / `EMAIL_FROM` | Optional pair for Resend email alerts. Delivery is opt-in per user; emails contain no request or health details. |
+| `APP_URL` | Frontend URL used in generic notification emails (default `http://localhost:5173`). |
 | `LOG_LEVEL` | pino log level |
-| `BLOCKCHAIN_*` | Part 2 placeholders; no contract exists |
+| `BLOCKCHAIN_*` | Optional local/testnet contract and RPC settings; defaults keep blockchain disabled |
 
 Frontend variables (all public):
 
@@ -355,19 +360,16 @@ Useful scripts:
 1. **No live Supabase validation in this environment.** There were no Supabase credentials or
    Docker/Supabase CLI available. Authentication, hosted migrations and hosted RLS are implemented
    but must be verified once credentials are supplied.
-2. **Part 1 verification is database-backed.** There is no smart contract, wallet challenge,
-   MetaMask connection or on-chain transaction.
-3. **No email/SMS/push provider.** Notifications are stored in the database and shown in-app only.
-4. **No self-service account deletion or data export.** A real deployment needs a documented
-   data-subject request process.
+2. **Live blockchain run is unverified.** Solidity, backend challenge verification, anchor receipt validation and the browser MetaMask flow exist, but no live local RPC or testnet transaction has been executed end to end.
+3. **Email requires deployment configuration.** Resend-backed opt-in alerts are implemented with a durable outbox and generic message bodies, but no provider credentials or verified sender are configured here. SMS/push are not implemented.
+4. **Account closure is app-level anonymization, not full identity-provider erasure.** It disables sign-in and scrubs direct BloodBridge data while retaining anonymized workflow history. The Supabase Auth row/external identity is not deleted. JSON export remains available in Profile settings.
 5. **Matching is exact-group only.** It is not a clinical compatibility engine and does not rank by
    medical urgency.
 6. **Suspicious-request detection is heuristic.** It flags volume/rejection patterns for operator
    awareness; it is not a fraud determination.
-7. **No background job scheduler.** Expiry is evaluated when relevant endpoints run rather than by
-   a cron worker.
-8. **Frontend bundle is large** (~923 kB before gzip) because the workspace is not yet route-split.
-9. **Rate limits are in-memory.** For multi-instance deployment use a shared store.
+7. **No durable background job queue.** Expiry is swept by an in-process timer every 60 seconds and opportunistically during relevant service calls; a multi-instance deployment would need a real scheduler.
+8. **Vendor chunks remain substantial** (Supabase, ethers, and React are split out); the main entry is now about 140 kB before gzip.
+9. **Rate limits use memory locally.** Production configuration requires Redis for shared rate limits; no live Redis service was validated here.
 
 ---
 
@@ -386,13 +388,9 @@ Useful scripts:
 
 ---
 
-## 12. Part 2 hand-off
+## 12. Blockchain development
 
-Part 2 will add, without restarting the repository:
-- a Solidity contract using OpenZeppelin access control,
-- Hardhat local network and optional Sepolia deployment,
-- wallet challenge and MetaMask integration for approved verifiers,
-- real transaction submission/confirmation tracking in `blockchain_transactions`,
-- an explicit on-chain verification state that is separate from clinical checks.
-
-See [`docs/BLOCKCHAIN.md`](./docs/BLOCKCHAIN.md).
+Compile and test with `npm run contracts:compile` and `npm run contracts:test`. Run `npm run chain`,
+then `npm run contracts:deploy` in a second terminal to deploy locally. The MetaMask transaction
+workflow is implemented; live RPC verification remains. See [`docs/BLOCKCHAIN.md`](./docs/BLOCKCHAIN.md) and
+[`IMPLEMENTATION_STATUS.md`](./IMPLEMENTATION_STATUS.md).

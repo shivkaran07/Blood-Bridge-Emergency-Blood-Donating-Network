@@ -12,10 +12,10 @@ export function NotFoundPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-14 sm:px-6 lg:py-20">
       <Card className="p-6 sm:p-8">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-ink-100 text-ink-500">
+        <span className="flex size-14 items-center justify-center rounded-xl bg-ink-100 text-ink-500">
           <Compass className="size-7" aria-hidden="true" />
         </span>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-brand-accent">
           404 · Not found
         </p>
         <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink-900">

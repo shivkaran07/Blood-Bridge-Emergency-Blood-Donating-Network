@@ -10,7 +10,7 @@ export function AboutPage() {
     <InfoPage
       eyebrow="About the project"
       title="A coordination layer, built honestly"
-      description="BloodBridge is a B.Tech project exploring how a trustworthy emergency blood network could work. Part 1 delivers the working application foundation. Part 2 will add the real smart-contract layer."
+      description="BloodBridge is a B.Tech project exploring how a trustworthy emergency blood network could work. The working application records every decision in its database, with an optional wallet-signed audit layer where a deployment enables it."
     >
       <InfoSection title="Why this exists">
         <p>
@@ -39,8 +39,8 @@ export function AboutPage() {
           },
           {
             icon: Boxes,
-            title: 'Prepared for Part 2',
-            body: 'Audit keys, synchronization states and a transaction table exist now. No fake on-chain records are created.',
+            title: 'Optional audit anchoring',
+            body: 'Opaque audit keys and synchronization states are modeled explicitly. Hashes appear only after a real wallet transaction, never as demo data.',
           },
         ].map((item) => {
           const Icon = item.icon;
@@ -68,12 +68,12 @@ export function AboutPage() {
         />
       </InfoSection>
 
-      <InfoSection title="Part 1 and Part 2">
+      <InfoSection title="Application layer and audit layer">
         <div className="grid gap-4 sm:grid-cols-2">
-          <Card className="border-accent-200 bg-accent-50/40">
+          <div className="rounded-xl border border-accent-200 bg-accent-50/40 p-5 shadow-card sm:p-6">
             <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
               <ShieldCheck className="size-4 text-accent-700" aria-hidden="true" />
-              Available now
+              Always application-recorded
             </h3>
             <InfoList
               items={[
@@ -85,19 +85,19 @@ export function AboutPage() {
                 'Administrator controls, notifications and audit log.',
               ]}
             />
-          </Card>
+          </div>
           <Card>
             <h3 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
               <Waypoints className="size-4 text-ink-500" aria-hidden="true" />
-              Part 2 scope
+              Optional on-chain audit
             </h3>
             <InfoList
               items={[
                 'Solidity contract with OpenZeppelin access control.',
-                'Hardhat local network and optional Sepolia deployment.',
+                'Hardhat local network or an operator-configured chain.',
                 'Wallet challenge and MetaMask connection for verifiers.',
-                'Real transaction submission, confirmation and failure handling.',
-                'A clearly separate on-chain verification state.',
+                'Backend-validated transaction submission, confirmation and failure handling.',
+                'A separate on-chain state that never overrides clinical checks.',
               ]}
             />
           </Card>
@@ -105,8 +105,8 @@ export function AboutPage() {
       </InfoSection>
 
       <InfoSection title="Project context">
-        <div className="flex items-start gap-3 rounded-xl border border-ink-200 bg-white p-4">
-          <GraduationCap className="mt-0.5 size-5 shrink-0 text-ink-400" aria-hidden="true" />
+        <div className="flex items-start gap-3 rounded-xl border border-ink-200 bg-surface-raised p-4">
+          <GraduationCap className="mt-0.5 size-5 shrink-0 text-ink-500" aria-hidden="true" />
           <p className="text-sm leading-relaxed text-ink-600">
             This is an educational B.Tech prototype. It uses synthetic development data in tests and
             must not be used with real patient information. Any real deployment would require

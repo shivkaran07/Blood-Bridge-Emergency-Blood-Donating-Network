@@ -6,6 +6,8 @@ import type { Db, QueryResult, SqlValue } from '../db/database.js';
 import { runMigrations } from '../db/migrate.js';
 import { silentLogger } from '../lib/logger.js';
 import type { AuthVerifier } from '../auth/authVerifier.js';
+import type { IdentityAdmin } from '../auth/authVerifier.js';
+import type { ChainAdapter } from '../blockchain/adapter.js';
 import type { AuthenticatedUser } from '../types/domain.js';
 import { UnauthorizedError } from '../lib/errors.js';
 import { createApp } from '../app.js';
@@ -69,6 +71,7 @@ export async function createTestDb(): Promise<PgliteDb> {
     create table if not exists auth.users (
       id uuid primary key,
       email text,
+      email_confirmed_at timestamptz not null default now(),
       raw_user_meta_data jsonb not null default '{}'::jsonb,
       created_at timestamptz not null default now()
     );
@@ -184,7 +187,12 @@ export async function createUser(
 
   await db.query('update public.profiles set full_name = $2 where id = $1', [id, fullName]);
 
-  const user: AuthenticatedUser = { id, email: input.email, emailConfirmedAt: new Date().toISOString() };
+  const user: AuthenticatedUser = {
+    id,
+    email: input.email,
+    emailConfirmedAt: new Date().toISOString(),
+    authTime: Math.floor(Date.now() / 1000),
+  };
   return { id, email: input.email, token: registerTestToken(user) };
 }
 
@@ -206,6 +214,7 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       writeMax: 1000,
       requestCreateMax: 1000,
       responseMax: 1000,
+      redisUrl: null,
     },
     blockchain: {
       enabled: false,
@@ -213,17 +222,35 @@ export function testConfig(overrides: Partial<AppConfig> = {}): AppConfig {
       chainId: 31337,
       rpcUrl: 'http://127.0.0.1:8545',
       contractAddress: null,
+      walletChallengeTtlSeconds: 300,
+      confirmations: 1,
+      receiptTimeoutMs: 120_000,
+    },
+    email: {
+      resendApiKey: null,
+      fromAddress: null,
+      appUrl: 'http://localhost:5173',
     },
     ...overrides,
   };
 }
 
-export function createTestApp(db: PgliteDb, config = testConfig()) {
+export function createTestApp(
+  db: PgliteDb,
+  config: AppConfig = testConfig(),
+  chain?: ChainAdapter | null,
+  identityAdmin: IdentityAdmin = { anonymizeUser: async () => undefined },
+) {
   return createApp({
     config,
     db,
     verifier: new StubAuthVerifier(),
+    identityAdmin,
     logger: process.env.TEST_LOG === '1' ? pino({ level: 'error' }) : silentLogger,
+    // `undefined` = derive from config (real adapters in ON_CHAIN mode);
+    // explicit null forces DATABASE-mode plumbing in tests even when the
+    // config says ON_CHAIN.
+    chain,
   });
 }
 

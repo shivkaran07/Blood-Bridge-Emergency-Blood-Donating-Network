@@ -11,6 +11,7 @@ import type {
   RequestStatus,
   ResponseStatus,
 } from '../types/domain.js';
+import type { VerificationMode } from '../config/env.js';
 import { maskName } from '../lib/crypto.js';
 import { toIso, toIsoOrNull, toNumberOrNull } from '../lib/serialize.js';
 import type {
@@ -130,9 +131,9 @@ export interface RequestPermissionsDto {
 }
 
 export interface VerificationDto {
-  mode: 'DATABASE';
+  mode: 'DATABASE' | 'ON_CHAIN';
   blockchainStatus: BlockchainSyncStatus;
-  blockchainVerified: false;
+  blockchainVerified: boolean;
   transactionCount: number;
   note: string;
 }
@@ -173,6 +174,8 @@ export interface RequestDtoOptions {
   includeAuditKey: boolean;
   canRespond: boolean;
   transactionCount: number;
+  /** Current verification mode of the running backend. Defaults to DATABASE. */
+  verificationMode?: VerificationMode;
 }
 
 /**
@@ -188,6 +191,10 @@ export function toRequestDto(
   const isVerifier = options.viewer.isApprovedHospital;
   const status = row.status;
   const isClosed = ['FULFILLED', 'CANCELLED', 'EXPIRED', 'REJECTED'].includes(status);
+
+  const mode: VerificationMode = options.verificationMode ?? 'DATABASE';
+  const onChain = mode === 'ON_CHAIN';
+  const confirmed = row.blockchain_sync_status === 'CONFIRMED';
 
   return {
     id: row.id,
@@ -221,9 +228,9 @@ export function toRequestDto(
         isOwner &&
         ['SUBMITTED', 'UNDER_REVIEW', 'VERIFIED'].includes(status) &&
         !isClosed,
-      canComplete:
-        (isOwner || isAdmin) &&
-        ['VERIFIED', 'PARTIALLY_FULFILLED'].includes(status),
+      canComplete: onChain
+        ? isVerifier && ['VERIFIED', 'PARTIALLY_FULFILLED'].includes(status)
+        : (isOwner || isAdmin) && ['VERIFIED', 'PARTIALLY_FULFILLED'].includes(status),
       canVerify:
         isVerifier && ['SUBMITTED', 'UNDER_REVIEW'].includes(status),
       canRespond: options.canRespond,
@@ -232,11 +239,13 @@ export function toRequestDto(
       canViewRequesterContact: options.includeRequesterContact,
     },
     verification: {
-      mode: 'DATABASE',
+      mode,
       blockchainStatus: row.blockchain_sync_status,
-      blockchainVerified: false,
+      blockchainVerified: onChain && confirmed,
       transactionCount: options.transactionCount,
-      note: 'Part 1 verification is database-backed. No blockchain transaction has been submitted.',
+      note: onChain
+        ? 'Decision anchors require a wallet-signed BloodBridge transaction that the backend verifies against the chain before the status is recorded.'
+        : 'Verification is database-backed. No blockchain transaction has been submitted in this mode.',
     },
   };
 }
@@ -491,6 +500,8 @@ export interface MeDto {
     isApprovedVerifier: boolean;
   };
   profileComplete: boolean;
+  emailNotificationsEnabled: boolean;
+  emailNotificationsAvailable: boolean;
   donorProfile: DonorProfileDto | null;
   hospitalProfile: HospitalProfileDto | null;
   unreadNotifications: number;

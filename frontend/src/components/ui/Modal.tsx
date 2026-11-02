@@ -41,7 +41,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center p-0 sm:items-center sm:p-4">
       <div
-        className="absolute inset-0 bg-ink-950/45 backdrop-blur-[2px]"
+        className="absolute inset-0 bg-black/55 backdrop-blur-[2px]"
         onClick={onClose}
         aria-hidden="true"
       />
@@ -51,7 +51,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
         aria-labelledby={titleId}
         aria-describedby={description ? descriptionId : undefined}
         className={cn(
-          'relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-ink-200 bg-white shadow-lift animate-fade-up sm:rounded-2xl',
+          'relative flex max-h-[92dvh] w-full flex-col overflow-hidden rounded-t-2xl border border-ink-200 bg-surface-raised shadow-lift animate-fade-up sm:rounded-2xl',
           sizeClasses[size],
         )}
       >
@@ -69,7 +69,7 @@ export function Modal({ open, onClose, title, description, children, footer, siz
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg p-1.5 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+            className="rounded-lg p-1.5 text-ink-500 transition hover:bg-ink-100 hover:text-ink-700"
             aria-label="Close dialog"
           >
             <X className="size-5" />

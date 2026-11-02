@@ -44,8 +44,8 @@ export async function upsertDonorProfile(
       input.bloodGroup,
       input.isAvailable,
       input.consentToContact,
-      input.consentToContact ? input.latitude : null,
-      input.consentToContact ? input.longitude : null,
+      input.latitude,
+      input.longitude,
     ],
   );
   return result.rows[0]!;
@@ -125,7 +125,10 @@ export async function donorStats(
 export async function countOpenRequestsForDonor(
   db: Db,
   bloodGroup: BloodGroup,
+  isAvailable: boolean,
+  consentToContact: boolean,
 ): Promise<number> {
+  if (!isAvailable || !consentToContact) return 0;
   const result = await db.query<{ count: number }>(
     `select count(*)::int as count
        from public.blood_requests

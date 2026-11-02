@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
 import type { AppConfig } from '../config/env.js';
 import type { AuthenticatedUser } from '../types/domain.js';
@@ -9,12 +10,16 @@ export interface AuthVerifier {
   verifyToken(token: string): Promise<AuthenticatedUser>;
 }
 
+export interface IdentityAdmin {
+  anonymizeUser(userId: string): Promise<void>;
+}
+
 /**
  * Server-side Supabase token validation. We use auth.getUser (rather than
  * decoding the JWT in the application) so revoked/expired sessions are
  * rejected by Supabase Auth.
  */
-export class SupabaseAuthVerifier implements AuthVerifier {
+export class SupabaseAuthVerifier implements AuthVerifier, IdentityAdmin {
   private readonly client: SupabaseClient;
 
   constructor(
@@ -44,6 +49,7 @@ export class SupabaseAuthVerifier implements AuthVerifier {
         id: data.user.id,
         email: data.user.email ?? null,
         emailConfirmedAt: data.user.email_confirmed_at ?? null,
+        authTime: tokenAuthTime(token),
       };
     } catch (error) {
       if (error instanceof UnauthorizedError) throw error;
@@ -56,5 +62,44 @@ export class SupabaseAuthVerifier implements AuthVerifier {
         'Unable to verify your session right now. Please try again shortly.',
       );
     }
+
+  }
+
+  async anonymizeUser(userId: string): Promise<void> {
+    const { error } = await this.client.auth.admin.updateUserById(userId, {
+      email: `deleted+${userId}@example.invalid`,
+      password: randomPassword(),
+      email_confirm: true,
+      ban_duration: '876000h',
+      user_metadata: {},
+    });
+
+    if (error) {
+      this.logger.error(
+        { userId, err: { message: error.message, name: error.name } },
+        'Supabase identity anonymization failed',
+      );
+      throw new ServiceUnavailableError(
+        'Your BloodBridge data was anonymized, but sign-in could not be disabled. Please contact support.',
+      );
+    }
+  }
+
+}
+
+function randomPassword(): string {
+  return randomBytes(48).toString('base64url');
+}
+
+function tokenAuthTime(token: string): number | null {
+  const payload = token.split('.')[1];
+  if (!payload) return null;
+  try {
+    const claims = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')) as {
+      auth_time?: unknown;
+    };
+    return typeof claims.auth_time === 'number' ? claims.auth_time : null;
+  } catch {
+    return null;
   }
 }

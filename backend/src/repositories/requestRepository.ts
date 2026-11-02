@@ -467,6 +467,7 @@ export async function requesterRequestSummary(
   verified: number;
   fulfilled: number;
   cancelled: number;
+  expired: number;
   responses_received: number;
 }> {
   const result = await db.query<{
@@ -475,14 +476,19 @@ export async function requesterRequestSummary(
     verified: number;
     fulfilled: number;
     cancelled: number;
+    expired: number;
     responses_received: number;
   }>(
     `select
        count(*)::int as total,
-       count(*) filter (where status in ('SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'PARTIALLY_FULFILLED'))::int as active,
-       count(*) filter (where status = 'VERIFIED')::int as verified,
+       count(*) filter (
+         where status in ('SUBMITTED', 'UNDER_REVIEW', 'VERIFIED', 'PARTIALLY_FULFILLED')
+           and needed_by > now()
+       )::int as active,
+       count(*) filter (where status = 'VERIFIED' and needed_by > now())::int as verified,
        count(*) filter (where status = 'FULFILLED')::int as fulfilled,
        count(*) filter (where status = 'CANCELLED')::int as cancelled,
+       count(*) filter (where status = 'EXPIRED')::int as expired,
        (select count(*)::int from public.donor_responses dr
          join public.blood_requests br on br.id = dr.request_id
         where br.requester_id = $1
@@ -498,6 +504,7 @@ export async function requesterRequestSummary(
       verified: 0,
       fulfilled: 0,
       cancelled: 0,
+      expired: 0,
       responses_received: 0,
     }
   );

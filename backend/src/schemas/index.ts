@@ -86,6 +86,15 @@ export const updateProfileSchema = z
 
 export type UpdateProfileInput = z.infer<typeof updateProfileSchema>;
 
+export const emailNotificationsSchema = z
+  .object({ enabled: z.boolean() })
+  .strict();
+export type EmailNotificationsInput = z.infer<typeof emailNotificationsSchema>;
+
+export const anonymizeAccountSchema = z
+  .object({ confirmation: z.literal('DELETE') })
+  .strict();
+
 // ---------------------------------------------------------------------------
 // Donor profile
 // ---------------------------------------------------------------------------
@@ -107,13 +116,6 @@ export const donorProfileSchema = z
         code: 'custom',
         message: 'Provide both latitude and longitude, or neither.',
         path: hasLat ? ['longitude'] : ['latitude'],
-      });
-    }
-    if ((hasLat || hasLng) && !value.consentToContact) {
-      ctx.addIssue({
-        code: 'custom',
-        message: 'Coordinates require consent to be contacted.',
-        path: ['consentToContact'],
       });
     }
   })
@@ -322,6 +324,38 @@ export const adminAuditQuerySchema = z.object({
 export const adminCancelRequestSchema = z
   .object({ reason: nonEmptyText('Cancellation reason', 10, 500) })
   .strict();
+
+// ---------------------------------------------------------------------------
+// Wallet ownership + blockchain anchors (Part 2)
+// ---------------------------------------------------------------------------
+export const walletAddress = z
+  .string()
+  .trim()
+  .regex(/^0x[0-9a-fA-F]{40}$/, 'Provide a valid 0x Ethereum wallet address.');
+
+export const walletChallengeSchema = z.object({ walletAddress }).strict();
+
+export const walletVerifySchema = z
+  .object({
+    message: z.string().trim().min(20, 'The signed message is missing.').max(2_000),
+    signature: z.string().trim().regex(/^0x[0-9a-fA-F]{130}$/, 'Provide the 65-byte personal_sign signature.'),
+  })
+  .strict();
+
+export const anchorTransactionHash = z
+  .string()
+  .trim()
+  .regex(/^0x[0-9a-fA-F]{64}$/, 'Provide a valid transaction hash (0x + 64 hex characters).');
+
+export const anchorConfirmSchema = z.object({ transactionHash: anchorTransactionHash }).strict();
+
+export const operationsQuerySchema = z.object({
+  requestId: z.string().uuid().optional(),
+  status: z
+    .enum(['PENDING', 'SUBMITTED', 'CONFIRMED', 'FAILED', 'NEEDS_RECONCILIATION'])
+    .optional(),
+  ...paginationSchema.shape,
+});
 
 // ---------------------------------------------------------------------------
 // Notifications

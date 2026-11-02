@@ -21,8 +21,8 @@ const styles: Record<AlertVariant, { container: string; icon: string; Icon: type
     Icon: AlertTriangle,
   },
   danger: {
-    container: 'border-brand-200 bg-brand-50 text-brand-900',
-    icon: 'text-brand-600',
+    container: 'border-brand-200 bg-brand-50 text-brand-accent',
+    icon: 'text-brand-accent',
     Icon: XCircle,
   },
   neutral: {

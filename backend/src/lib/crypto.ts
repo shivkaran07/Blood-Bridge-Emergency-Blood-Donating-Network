@@ -1,4 +1,4 @@
-import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
+import { createHash, randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
 
 /**
  * Generates an opaque, 256-bit audit reference for future blockchain anchoring.
@@ -7,6 +7,15 @@ import { randomBytes, randomUUID, timingSafeEqual } from 'node:crypto';
  */
 export function generateAuditKey(): string {
   return randomBytes(32).toString('hex');
+}
+
+/** Cryptographically secure nonce, URL-safe lowercase hex with 0x prefix. */
+export function randomHex(byteLength: number): string {
+  return `0x${randomBytes(byteLength).toString('hex')}`;
+}
+
+export function sha256Hex(value: string): string {
+  return createHash('sha256').update(value).digest('hex');
 }
 
 export function generateRequestId(): string {

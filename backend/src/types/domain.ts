@@ -60,6 +60,7 @@ export const BLOCKCHAIN_SYNC_STATUSES = [
   'SUBMITTED',
   'CONFIRMED',
   'FAILED',
+  'NEEDS_RECONCILIATION',
 ] as const;
 export type BlockchainSyncStatus = (typeof BLOCKCHAIN_SYNC_STATUSES)[number];
 
@@ -109,6 +110,16 @@ export const AUDIT_EVENT_TYPES = [
   'USER_SUSPENDED',
   'USER_REACTIVATED',
   'ROLE_GRANTED',
+  'WALLET_CHALLENGE_ISSUED',
+  'WALLET_BOUND',
+  'WALLET_UNBOUND',
+  'WALLET_CHALLENGE_REJECTED',
+  'BLOCKCHAIN_ANCHOR_PREPARED',
+  'BLOCKCHAIN_ANCHOR_CONFIRMED',
+  'BLOCKCHAIN_ANCHOR_FAILED',
+  'BLOCKCHAIN_RECONCILE_CONFIRMED',
+  'BLOCKCHAIN_RECONCILE_FAILED',
+  'ACCOUNT_ANONYMIZED',
 ] as const;
 export type AuditEventType = (typeof AUDIT_EVENT_TYPES)[number];
 
@@ -121,6 +132,7 @@ export interface ProfileRow {
   city: string | null;
   area: string | null;
   postal_code: string | null;
+  email_notifications_enabled: boolean;
   account_status: AccountStatus;
   created_at: DbTimestamp;
   updated_at: DbTimestamp;
@@ -159,7 +171,7 @@ export interface BloodRequestRow {
   needed_by: DbTimestamp;
   priority: RequestPriority;
   public_message: string | null;
-  requester_contact_phone: string;
+  requester_contact_phone: string | null;
   contact_share_consent: boolean;
   status: RequestStatus;
   cancellation_reason: string | null;
@@ -233,6 +245,40 @@ export interface AuditEventRow {
   created_at: DbTimestamp;
 }
 
+/** On-chain BloodBridge contract states. */
+export const ON_CHAIN_STATUS_VALUES = [
+  'NONE',
+  'VERIFIED',
+  'REJECTED',
+  'CANCELLED',
+  'COMPLETED',
+] as const;
+
+/** Operations the wallet anchors on chain, with the contract function to call. */
+export const BLOCKCHAIN_ANCHOR_ACTIONS = ['VERIFY_REQUEST', 'REJECT_REQUEST', 'FULFILL_REQUEST'] as const;
+export type BlockchainAnchorAction = (typeof BLOCKCHAIN_ANCHOR_ACTIONS)[number];
+
+export interface WalletChallengeRow {
+  id: string;
+  user_id: string;
+  wallet_address: string;
+  nonce_hash: string;
+  message_hash: string;
+  purpose: 'WALLET_BINDING';
+  expires_at: DbTimestamp;
+  consumed_at: DbTimestamp | null;
+  created_at: DbTimestamp;
+}
+
+export interface WalletBindingRow {
+  user_id: string;
+  wallet_address: string;
+  chain_id: number | string;
+  verified_at: DbTimestamp;
+  created_at: DbTimestamp;
+  updated_at: DbTimestamp;
+}
+
 export interface BlockchainTransactionRow {
   id: string;
   request_id: string;
@@ -242,9 +288,17 @@ export interface BlockchainTransactionRow {
   contract_address: string;
   transaction_hash: string | null;
   action: string;
-  transaction_status: 'PENDING' | 'SUBMITTED' | 'CONFIRMED' | 'FAILED';
+  transaction_status:
+    | 'PENDING'
+    | 'SUBMITTED'
+    | 'CONFIRMED'
+    | 'FAILED'
+    | 'NEEDS_RECONCILIATION';
   block_number: number | string | null;
   actor_user_id: string | null;
+  source_address: string | null;
+  error_message: string | null;
+  confirmed_at: DbTimestamp | null;
   created_at: DbTimestamp;
   updated_at: DbTimestamp;
 }
@@ -253,6 +307,7 @@ export interface AuthenticatedUser {
   id: string;
   email: string | null;
   emailConfirmedAt: string | null;
+  authTime?: number | null;
 }
 
 export interface AuthContext {

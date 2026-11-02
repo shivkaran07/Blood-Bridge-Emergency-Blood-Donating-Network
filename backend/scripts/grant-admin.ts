@@ -1,4 +1,6 @@
-import 'dotenv/config';
+import dotenv from 'dotenv';
+dotenv.config();
+dotenv.config({ path: '.env.local', override: true });
 import { loadConfig } from '../src/config/env.js';
 import { createLogger } from '../src/lib/logger.js';
 import { createPgDb } from '../src/db/database.js';

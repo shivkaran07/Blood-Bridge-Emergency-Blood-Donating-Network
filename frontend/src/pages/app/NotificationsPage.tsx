@@ -78,20 +78,26 @@ export function NotificationsPage() {
         />
       ) : notifications.data && notifications.data.items.length > 0 ? (
         <>
-          <div className="overflow-hidden rounded-2xl border border-ink-200/80 bg-white shadow-card">
+          <div className="overflow-hidden rounded-xl border border-ink-200/90 bg-surface-raised shadow-card">
             <ul className="divide-y divide-ink-100">
               {notifications.data.items.map((notification) => {
                 const unread = !notification.readAt;
                 return (
                   <li
                     key={notification.id}
-                    className={cn('p-4 sm:p-5', unread ? 'bg-brand-50/30' : 'bg-white')}
+                    className={cn(
+                      'relative p-4 sm:p-5',
+                      unread ? 'bg-brand-50/30' : 'bg-surface-raised',
+                    )}
                   >
+                    {unread ? (
+                      <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-brand-500" aria-hidden="true" />
+                    ) : null}
                     <div className="flex items-start gap-3">
                       <span
                         className={cn(
                           'mt-0.5 flex size-9 shrink-0 items-center justify-center rounded-lg',
-                          unread ? 'bg-brand-100 text-brand-700' : 'bg-ink-100 text-ink-500',
+                          unread ? 'bg-brand-100 text-brand-accent' : 'bg-ink-100 text-ink-500',
                         )}
                       >
                         {unread ? (
@@ -102,21 +108,21 @@ export function NotificationsPage() {
                       </span>
                       <div className="min-w-0 flex-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-semibold text-ink-900">{notification.title}</p>
+                          <p className="text-[0.875rem] font-semibold text-ink-900">{notification.title}</p>
                           <Badge tone="outline">
                             {notificationLabels[notification.type] ?? notification.type}
                           </Badge>
                           {unread ? <Badge tone="brand">Unread</Badge> : null}
                         </div>
-                        <p className="mt-1 text-sm leading-relaxed text-ink-600">
+                        <p className="mt-1 text-[0.8125rem] leading-relaxed text-ink-600">
                           {notification.message}
                         </p>
-                        <div className="mt-2 flex flex-wrap items-center gap-3 text-xs text-ink-400">
+                        <div className="mt-2 flex flex-wrap items-center gap-3 text-[0.6875rem] text-ink-500">
                           <span>{formatDateTime(notification.createdAt)}</span>
                           {notification.relatedRequestId ? (
                             <Link
                               to={`/app/requests/${notification.relatedRequestId}`}
-                              className="font-semibold text-brand-700 hover:text-brand-800"
+                              className="inline-flex min-h-11 items-center font-semibold text-brand-accent hover:text-brand-accent-strong"
                             >
                               Open request
                             </Link>
@@ -124,15 +130,18 @@ export function NotificationsPage() {
                         </div>
                       </div>
                       {unread ? (
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          isLoading={markRead.isPending && markRead.variables === notification.id}
-                          onClick={() => markRead.mutate(notification.id)}
-                          leftIcon={<Check className="size-4" aria-hidden="true" />}
-                        >
-                          Mark read
-                        </Button>
+                        <div className="shrink-0 self-start">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            aria-label="Mark notification read"
+                            isLoading={markRead.isPending && markRead.variables === notification.id}
+                            onClick={() => markRead.mutate(notification.id)}
+                            leftIcon={<Check className="size-4" aria-hidden="true" />}
+                          >
+                            <span className="hidden sm:inline">Mark read</span>
+                          </Button>
+                        </div>
                       ) : null}
                     </div>
                   </li>

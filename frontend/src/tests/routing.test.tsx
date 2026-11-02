@@ -1,31 +1,35 @@
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { describe, expect, it } from 'vitest';
 import { App } from '../App';
 import { AuthProvider } from '../context/AuthContext';
+import { ThemeProvider } from '../context/ThemeContext';
 
 function renderAt(path: string) {
   return render(
     <MemoryRouter initialEntries={[path]}>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
+      <ThemeProvider>
+        <AuthProvider>
+          <App />
+        </AuthProvider>
+      </ThemeProvider>
     </MemoryRouter>,
   );
 }
 
 describe('public routing', () => {
-  it('renders the landing page with both primary call-to-action paths', () => {
+  it('renders the landing page with both primary call-to-action paths', async () => {
     renderAt('/');
-    expect(
-      screen.getByRole('heading', { name: /when minutes matter/i }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /every connection/i })).toBeInTheDocument();
+    const header = within(screen.getByRole('banner'));
+    expect(header.getByText('Blood donation')).toBeInTheDocument();
+    expect(header.getByText('coordination network')).toBeInTheDocument();
 
-    expect(screen.getByRole('link', { name: /request blood/i })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: /request blood/i })[0]).toHaveAttribute(
       'href',
       '/register?type=REQUESTER',
     );
-    expect(screen.getByRole('link', { name: /become a donor/i })).toHaveAttribute(
+    expect(screen.getAllByRole('link', { name: /become a donor/i })[1]).toHaveAttribute(
       'href',
       '/register?type=DONOR',
     );
@@ -37,7 +41,9 @@ describe('public routing', () => {
     expect(
       screen.getByRole('heading', { name: /from an urgent request to a recorded decision/i }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/hospital review/i)).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { name: /2\. hospital review/i }),
+    ).toBeInTheDocument();
   });
 
   it('serves the FAQ page without claiming blockchain verification', () => {
@@ -63,12 +69,15 @@ describe('public routing', () => {
     expect(screen.getByText('/this-page-does-not-exist')).toBeInTheDocument();
   });
 
-  it('resolves the specification /dashboard alias to the protected workspace', () => {
+  it('resolves the specification /dashboard alias to the protected workspace', async () => {
     renderAt('/dashboard');
-    // With no Supabase configuration the guard shows setup instructions rather
-    // than crashing or exposing the workspace.
-    expect(
-      screen.getByRole('heading', { name: /connect the frontend to supabase/i }),
-    ).toBeInTheDocument();
+    // Depending on whether Supabase credentials exist at build time, the guard
+    // either shows setup instructions or sends an anonymous visitor to sign in.
+    // In both cases the workspace must not be exposed.
+    const heading = await screen.findByRole('heading', {
+      name: /connect the frontend to supabase|sign in to bloodbridge|we could not open your workspace/i,
+    });
+    expect(heading).toBeInTheDocument();
+    expect(screen.queryByText(/good to see you/i)).not.toBeInTheDocument();
   });
 });

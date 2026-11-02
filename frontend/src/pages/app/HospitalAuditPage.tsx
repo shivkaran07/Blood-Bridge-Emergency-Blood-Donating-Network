@@ -38,8 +38,9 @@ export function HospitalAuditPage() {
       />
 
       <Alert variant="neutral" title="Immutable application record">
-        These events are stored in the application audit log. They are not blockchain
-        transactions. Part 2 will add an optional on-chain anchor.
+        These events are stored in the application audit log. Where the deployment enables
+        anchoring, a separate on-chain reference may exist, but it is never a substitute for this
+        record.
       </Alert>
 
       {audit.isLoading ? (
@@ -63,7 +64,7 @@ export function HospitalAuditPage() {
             />
           </div>
 
-          <div className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-card sm:p-5">
+          <div className="rounded-xl border border-ink-200/90 bg-surface-raised p-4 shadow-card sm:p-5">
             <AuditEventTable items={audit.data.items} />
           </div>
 
@@ -79,7 +80,7 @@ export function HospitalAuditPage() {
         <ErrorState title="No review history" message="No review decisions have been recorded yet." />
       )}
 
-      <div className="flex items-center gap-2 text-xs text-ink-400">
+      <div className="flex items-center gap-2 text-xs text-ink-500">
         <History className="size-4" aria-hidden="true" />
         Decisions are retained even if a request later expires or is cancelled.
       </div>

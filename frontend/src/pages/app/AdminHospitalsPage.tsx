@@ -103,10 +103,10 @@ export function AdminHospitalsPage() {
         description="Review institutional applications. Approval grants the HOSPITAL role; rejection removes verifier access. No administrator privileges are granted here."
       />
 
-      <Alert variant="warning" title="Verification is database-backed in Part 1">
-        Approving an application does not create a smart contract, wallet or blockchain
-        transaction. It grants access to the application's verification queue and records an audit
-        event.
+      <Alert variant="warning" title="Approval is an application permission">
+        Approving an application grants access to the application's verification queue and records
+        an audit event. It does not create a contract, grant administrator rights or prove clinical
+        capability.
       </Alert>
 
       <FilterChips
@@ -135,10 +135,10 @@ export function AdminHospitalsPage() {
             {applications.data.items.map((application) => {
               const pending = application.verificationStatus === 'PENDING';
               return (
-                <article key={application.id} className="rounded-2xl border border-ink-200/80 bg-white p-5 shadow-card">
+                <article key={application.id} className="rounded-xl border border-ink-200/90 bg-surface-raised p-5 shadow-card">
                   <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
                     <div className="flex items-start gap-3">
-                      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                      <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-accent">
                         <Building2 className="size-5" aria-hidden="true" />
                       </span>
                       <div className="min-w-0">
@@ -190,12 +190,12 @@ export function AdminHospitalsPage() {
 
                   <dl className="mt-4 grid gap-3 border-t border-ink-100 pt-4 text-xs sm:grid-cols-2 lg:grid-cols-4">
                     <div>
-                      <dt className="font-medium uppercase tracking-wide text-ink-400">Applicant</dt>
+                      <dt className="font-medium uppercase tracking-wide text-ink-500">Applicant</dt>
                       <dd className="mt-1 font-medium text-ink-800">{application.applicantName}</dd>
                       <dd className="text-ink-500">{application.applicantEmail}</dd>
                     </div>
                     <div>
-                      <dt className="font-medium uppercase tracking-wide text-ink-400">Contact person</dt>
+                      <dt className="font-medium uppercase tracking-wide text-ink-500">Contact person</dt>
                       <dd className="mt-1 font-medium text-ink-800">{application.contactPerson}</dd>
                       <dd className="inline-flex items-center gap-1 text-ink-500">
                         <Phone className="size-3" aria-hidden="true" />
@@ -203,14 +203,14 @@ export function AdminHospitalsPage() {
                       </dd>
                     </div>
                     <div>
-                      <dt className="font-medium uppercase tracking-wide text-ink-400">Official email</dt>
+                      <dt className="font-medium uppercase tracking-wide text-ink-500">Official email</dt>
                       <dd className="mt-1 inline-flex items-center gap-1 font-medium text-ink-800">
                         <Mail className="size-3" aria-hidden="true" />
                         {application.officialEmail}
                       </dd>
                     </div>
                     <div>
-                      <dt className="font-medium uppercase tracking-wide text-ink-400">Review</dt>
+                      <dt className="font-medium uppercase tracking-wide text-ink-500">Review</dt>
                       <dd className="mt-1 text-ink-700">
                         {application.verifiedByName ?? 'Not reviewed'}
                       </dd>

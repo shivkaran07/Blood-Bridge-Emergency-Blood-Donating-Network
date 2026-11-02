@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { Navigate, Route, Routes, useParams } from 'react-router-dom';
 import { PublicLayout } from './components/layout/PublicLayout';
 import {
@@ -6,6 +7,7 @@ import {
   RequireApprovedHospital,
 } from './components/layout/ProtectedRoute';
 import { AppShell } from './components/layout/AppShell';
+import { PageLoader } from './components/ui/States';
 
 import { LandingPage } from './pages/public/LandingPage';
 import { HowItWorksPage } from './pages/public/HowItWorksPage';
@@ -13,30 +15,83 @@ import { AboutPage } from './pages/public/AboutPage';
 import { FaqPage } from './pages/public/FaqPage';
 import { LoginPage } from './pages/public/LoginPage';
 import { RegisterPage } from './pages/public/RegisterPage';
+import { ForgotPasswordPage } from './pages/public/ForgotPasswordPage';
+import { ResetPasswordPage } from './pages/public/ResetPasswordPage';
 import { PrivacyPage } from './pages/public/PrivacyPage';
 import { TermsPage } from './pages/public/TermsPage';
 import { UnauthorizedPage } from './pages/public/UnauthorizedPage';
 import { NotFoundPage } from './pages/public/NotFoundPage';
 
-import { DashboardPage } from './pages/app/DashboardPage';
-import { ProfilePage } from './pages/app/ProfilePage';
-import { DonorProfilePage } from './pages/app/DonorProfilePage';
-import { RequestsFeedPage } from './pages/app/RequestsFeedPage';
-import { NewRequestPage } from './pages/app/NewRequestPage';
-import { RequestDetailPage } from './pages/app/RequestDetailPage';
-import { MyRequestsPage } from './pages/app/MyRequestsPage';
-import { MyResponsesPage } from './pages/app/MyResponsesPage';
-import { NotificationsPage } from './pages/app/NotificationsPage';
-import { BlockchainStatusPage } from './pages/app/BlockchainStatusPage';
-import { HospitalApplicationPage } from './pages/app/HospitalApplicationPage';
-import { HospitalDashboardPage } from './pages/app/HospitalDashboardPage';
-import { HospitalQueuePage } from './pages/app/HospitalQueuePage';
-import { HospitalAuditPage } from './pages/app/HospitalAuditPage';
-import { AdminDashboardPage } from './pages/app/AdminDashboardPage';
-import { AdminUsersPage } from './pages/app/AdminUsersPage';
-import { AdminRequestsPage } from './pages/app/AdminRequestsPage';
-import { AdminHospitalsPage } from './pages/app/AdminHospitalsPage';
-import { AdminAuditPage } from './pages/app/AdminAuditPage';
+// Secondary authenticated routes are split out of the public bundle. The
+// landing page, auth flow and public information pages stay eager so the first
+// paint never waits on a workspace chunk.
+const DashboardPage = lazy(() =>
+  import('./pages/app/DashboardPage').then((module) => ({ default: module.DashboardPage })),
+);
+const ProfilePage = lazy(() =>
+  import('./pages/app/ProfilePage').then((module) => ({ default: module.ProfilePage })),
+);
+const DonorProfilePage = lazy(() =>
+  import('./pages/app/DonorProfilePage').then((module) => ({ default: module.DonorProfilePage })),
+);
+const RequestsFeedPage = lazy(() =>
+  import('./pages/app/RequestsFeedPage').then((module) => ({ default: module.RequestsFeedPage })),
+);
+const NewRequestPage = lazy(() =>
+  import('./pages/app/NewRequestPage').then((module) => ({ default: module.NewRequestPage })),
+);
+const RequestDetailPage = lazy(() =>
+  import('./pages/app/RequestDetailPage').then((module) => ({ default: module.RequestDetailPage })),
+);
+const MyRequestsPage = lazy(() =>
+  import('./pages/app/MyRequestsPage').then((module) => ({ default: module.MyRequestsPage })),
+);
+const MyResponsesPage = lazy(() =>
+  import('./pages/app/MyResponsesPage').then((module) => ({ default: module.MyResponsesPage })),
+);
+const NotificationsPage = lazy(() =>
+  import('./pages/app/NotificationsPage').then((module) => ({ default: module.NotificationsPage })),
+);
+const BlockchainStatusPage = lazy(() =>
+  import('./pages/app/BlockchainStatusPage').then((module) => ({
+    default: module.BlockchainStatusPage,
+  })),
+);
+const HospitalApplicationPage = lazy(() =>
+  import('./pages/app/HospitalApplicationPage').then((module) => ({
+    default: module.HospitalApplicationPage,
+  })),
+);
+const HospitalDashboardPage = lazy(() =>
+  import('./pages/app/HospitalDashboardPage').then((module) => ({
+    default: module.HospitalDashboardPage,
+  })),
+);
+const HospitalQueuePage = lazy(() =>
+  import('./pages/app/HospitalQueuePage').then((module) => ({ default: module.HospitalQueuePage })),
+);
+const HospitalAuditPage = lazy(() =>
+  import('./pages/app/HospitalAuditPage').then((module) => ({ default: module.HospitalAuditPage })),
+);
+const AdminDashboardPage = lazy(() =>
+  import('./pages/app/AdminDashboardPage').then((module) => ({
+    default: module.AdminDashboardPage,
+  })),
+);
+const AdminUsersPage = lazy(() =>
+  import('./pages/app/AdminUsersPage').then((module) => ({ default: module.AdminUsersPage })),
+);
+const AdminRequestsPage = lazy(() =>
+  import('./pages/app/AdminRequestsPage').then((module) => ({ default: module.AdminRequestsPage })),
+);
+const AdminHospitalsPage = lazy(() =>
+  import('./pages/app/AdminHospitalsPage').then((module) => ({
+    default: module.AdminHospitalsPage,
+  })),
+);
+const AdminAuditPage = lazy(() =>
+  import('./pages/app/AdminAuditPage').then((module) => ({ default: module.AdminAuditPage })),
+);
 
 /**
  * Alias routes exist so the URLs named in the project specification resolve.
@@ -50,7 +105,8 @@ function RequestAlias() {
 
 export function App() {
   return (
-    <Routes>
+    <Suspense fallback={<PageLoader label="Loading this section…" />}>
+      <Routes>
       {/* Public site */}
       <Route element={<PublicLayout />}>
         <Route index element={<LandingPage />} />
@@ -59,6 +115,8 @@ export function App() {
         <Route path="faq" element={<FaqPage />} />
         <Route path="login" element={<LoginPage />} />
         <Route path="register" element={<RegisterPage />} />
+        <Route path="forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="reset-password" element={<ResetPasswordPage />} />
         <Route path="privacy" element={<PrivacyPage />} />
         <Route path="terms" element={<TermsPage />} />
         <Route path="unauthorized" element={<UnauthorizedPage />} />
@@ -121,6 +179,7 @@ export function App() {
       <Route path="/admin/requests" element={<Navigate to="/app/admin/requests" replace />} />
       <Route path="/admin/hospitals" element={<Navigate to="/app/admin/hospitals" replace />} />
       <Route path="/admin/audit" element={<Navigate to="/app/admin/audit" replace />} />
-    </Routes>
+      </Routes>
+    </Suspense>
   );
 }

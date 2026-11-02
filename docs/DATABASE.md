@@ -1,11 +1,19 @@
 # Database
 
-The schema is defined by two version-controlled migrations:
+The schema is defined by six version-controlled migrations:
 
 1. `supabase/migrations/20261026090000_core_schema.sql` — enums, tables, constraints, indexes and
    the signup trigger.
 2. `supabase/migrations/20261026090100_rls_and_grants.sql` — helper functions, Row Level Security,
    policies and column-level grants.
+3. `supabase/migrations/20261026090200_blockchain_part2.sql` — wallet ownership and blockchain
+   operation state.
+4. `supabase/migrations/20261026090300_wallet_challenge_expiry.sql` — cleanup support for expired
+   wallet challenges.
+5. `supabase/migrations/20261102090000_separate_donor_location_consent.sql` — separates optional
+   donor location sharing from contact consent.
+6. `supabase/migrations/20261102100000_privacy_and_email_outbox.sql` — email-alert preference,
+   durable outbox, and nullable requester phone for account anonymization.
 
 Apply them with `npm run migrate -w backend` or `supabase db push`. See README §7.
 
@@ -32,6 +40,8 @@ auth.users 1──1 profiles 1──* user_roles
 - `hospital_profiles.user_id` is unique: one institutional application per account.
 - Deleting an auth user cascades to their profile, roles, donor/hospital profile, responses and
   notifications. Requests use `on delete restrict` to protect history.
+- Self-service account closure does not delete the Auth row: it disables sign-in and anonymizes
+  the retained profile so request ownership/history can remain referentially valid.
 - `audit_events` uses `on delete set null` for actor and request so the event survives.
 - `blockchain_transactions` currently has no writer in the application. It exists for Part 2.
 
@@ -64,6 +74,7 @@ One row per authenticated user.
 | `full_name` | ≤ 120 chars |
 | `phone_number` | private, 7–20 chars when present |
 | `city`, `area`, `postal_code` | general location only |
+| `email_notifications_enabled` | explicit opt-in; defaults off |
 | `account_status` | `ACTIVE` / `SUSPENDED` |
 | `created_at`, `updated_at` | trigger-maintained |
 
@@ -77,12 +88,14 @@ where applicable (null for the break-glass script).
 | `user_id` | PK, FK → `profiles` |
 | `blood_group` | required |
 | `is_available` | donor-controlled |
-| `consent_to_contact` | required for coordinates and contact sharing |
-| `latitude`, `longitude` | optional pair, range-checked |
+| `consent_to_contact` | controls phone sharing after an eligible offer is accepted |
+| `latitude`, `longitude` | separate optional location choice; pair, range-checked |
 | `privacy_consent_at` | records consent time |
 
-Constraints: coordinates must be both present or both absent, and coordinates require
-`consent_to_contact = true`.
+Coordinates must be both present or both absent. Their presence records the donor's independent
+choice to provide approximate location for internal distance estimates; it does not grant contact
+sharing or expose coordinates to other users. The `20261102090000_separate_donor_location_consent.sql`
+migration removes the former database constraint coupling coordinates to contact consent.
 
 ### `blood_requests`
 Core request record. Notable columns:
@@ -122,6 +135,11 @@ Institutional application and verification record. Unique `user_id` and unique
 ### `notifications`
 Recipient-scoped in-app notice with a constrained `notification_type`, title, message, optional
 related request and `read_at`. Indexed for recipient timeline and unread lookup.
+
+### `notification_email_outbox`
+Durable provider-delivery jobs keyed by in-app notification. Jobs are created only when the recipient
+has explicitly opted in, contain no copied email address or notification body, and retry with a
+bounded lease/backoff. Disabling alerts expires pending jobs; old jobs expire after 30 days.
 
 ### `audit_events`
 Application audit trail (not a blockchain ledger): nullable actor and request, `event_type`,

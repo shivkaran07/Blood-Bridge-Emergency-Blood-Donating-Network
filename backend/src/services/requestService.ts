@@ -1,5 +1,8 @@
 import type { AuthContext, BloodGroup, RequestStatus } from '../types/domain.js';
 import type { ServiceDeps } from './deps.js';
+import { deriveVerificationMode } from '../config/env.js';
+import { prepareAnchorOperation } from './anchorService.js';
+import type { AnchorOperationDto } from '../blockchain/types.js';
 import {
   countRequestFeed,
   countRequestsByRequester,
@@ -92,21 +95,52 @@ export interface RequestHistoryDto {
   createdAt: string;
 }
 
+/**
+ * Canonical donor eligibility predicate used by request-detail, the donor
+ * feed, and the (currently unused) canRespondToRequest helper.
+ *
+ * A donor is eligible to respond when ALL of the following hold:
+ *  1. They have an existing donor profile.
+ *  2. They are marked available.
+ *  3. They have enabled contact-sharing consent.
+ *  4. Their recorded blood group exactly matches the request.
+ *  5. They are not the requester.
+ *  6. The request is in VERIFIED or PARTIALLY_FULFILLED status.
+ *  7. The required-by deadline has not yet passed.
+ *  8. They have no existing active response for this request.
+ *
+ * This function is the single authoritative source for the canRespond flag.
+ * Both detailDto and listRequestFeedForViewer delegate here so the rules
+ * cannot drift independently. The server-side createDonorResponse service
+ * enforces the same constraints and remains the ultimate security boundary.
+ */
+function evaluateDonorEligibility(
+  donor: { is_available: boolean; consent_to_contact: boolean; blood_group: BloodGroup } | null | undefined,
+  request: { requester_id: string; status: RequestStatus; blood_group: BloodGroup; needed_by: string | Date },
+  viewerUserId: string,
+  hasActiveResponse: boolean,
+): boolean {
+  if (!donor) return false;
+  if (!donor.is_available) return false;
+  if (!donor.consent_to_contact) return false;
+  if (donor.blood_group !== request.blood_group) return false;
+  if (request.requester_id === viewerUserId) return false;
+  if (!['VERIFIED', 'PARTIALLY_FULFILLED'].includes(request.status)) return false;
+  if (new Date(request.needed_by).getTime() <= Date.now()) return false;
+  if (hasActiveResponse) return false;
+  return true;
+}
+
+/** @deprecated Use evaluateDonorEligibility instead. Kept for call-site
+ *  compatibility while the function is not yet called from any public path. */
 async function canRespondToRequest(
   deps: ServiceDeps,
   ctx: AuthContext,
   request: { id: string; requester_id: string; status: RequestStatus; blood_group: BloodGroup; needed_by: string | Date },
 ): Promise<boolean> {
-  if (request.requester_id === ctx.user.id) return false;
-  if (!['VERIFIED', 'PARTIALLY_FULFILLED'].includes(request.status)) return false;
-  if (new Date(request.needed_by).getTime() <= Date.now()) return false;
-
   const donor = await findDonorByUserId(deps.db, ctx.user.id);
-  if (!donor || !donor.is_available) return false;
-  if (donor.blood_group !== request.blood_group) return false;
-
   const existing = await findActiveResponse(deps.db, request.id, ctx.user.id);
-  return !existing;
+  return evaluateDonorEligibility(donor, request, ctx.user.id, Boolean(existing));
 }
 
 async function detailDto(
@@ -129,13 +163,7 @@ async function detailDto(
     ctx.isApprovedHospital ||
     Boolean(acceptedResponse && row.contact_share_consent);
 
-  const canRespond =
-    Boolean(donor?.is_available) &&
-    donor?.blood_group === row.blood_group &&
-    !isRequestOwner(ctx, row) &&
-    ['VERIFIED', 'PARTIALLY_FULFILLED'].includes(row.status) &&
-    new Date(row.needed_by).getTime() > Date.now() &&
-    !activeResponse;
+  const canRespond = evaluateDonorEligibility(donor, row, ctx.user.id, Boolean(activeResponse));
 
   return toRequestDto(row, {
     viewer: ctx,
@@ -143,6 +171,7 @@ async function detailDto(
     includeAuditKey: isRequestOwner(ctx, row) || ctx.isAdmin || ctx.isApprovedHospital,
     canRespond,
     transactionCount,
+    verificationMode: verificationMode(deps),
   });
 }
 
@@ -355,11 +384,7 @@ export async function listRequestFeedForViewer(
         viewer: ctx,
         includeRequesterContact: false,
         includeAuditKey: false,
-        canRespond:
-          Boolean(donor?.is_available) &&
-          donor?.blood_group === row.blood_group &&
-          row.requester_id !== ctx.user.id &&
-          !activeResponseIds.has(row.id),
+        canRespond: evaluateDonorEligibility(donor, row, ctx.user.id, activeResponseIds.has(row.id)),
         transactionCount: txCounts.get(row.id) ?? 0,
       }),
     ),
@@ -395,6 +420,19 @@ async function assertApprovedVerifier(ctx: AuthContext): Promise<void> {
   if (!ctx.isApprovedHospital) {
     throw new ForbiddenError('Only an approved hospital verifier can review blood requests.');
   }
+}
+
+/**
+ * A verify/reject/complete decision response. DATABASE mode keeps the exact
+ * Part 1 flat request shape; ON_CHAIN mode returns the pending anchor
+ * operation the wallet must sign. The discriminator is `mode`.
+ */
+export type DecisionOutcome =
+  | BloodRequestDto
+  | { mode: 'ON_CHAIN'; operation: AnchorOperationDto; request: BloodRequestDto };
+
+export function verificationMode(deps: ServiceDeps): ReturnType<typeof deriveVerificationMode> {
+  return deriveVerificationMode(deps.config.blockchain);
 }
 
 async function lockLiveRequest(db: ServiceDeps['db'], id: string) {
@@ -438,7 +476,7 @@ export async function claimRequestForReview(
       actorUserId: ctx.user.id,
       requestId: request.id,
       eventType: 'REQUEST_CLAIMED_FOR_REVIEW',
-      metadata: { verificationMode: 'DATABASE' },
+      metadata: { verificationMode: verificationMode(deps) },
     });
     await notifyUsers(tx, [request.requester_id], {
       type: 'REQUEST_UNDER_REVIEW',
@@ -456,8 +494,17 @@ export async function verifyRequest(
   ctx: AuthContext,
   requestId: string,
   reason: string | null,
-): Promise<BloodRequestDto> {
+): Promise<DecisionOutcome> {
   await assertApprovedVerifier(ctx);
+
+  if (verificationMode(deps) === 'ON_CHAIN') {
+    const operation = await prepareAnchorOperation(deps, ctx, requestId, 'VERIFY_REQUEST', reason);
+    return {
+      mode: 'ON_CHAIN',
+      operation,
+      request: await detailDto(deps, ctx, requestId),
+    };
+  }
 
   await deps.db.transaction(async (tx) => {
     const request = await lockLiveRequest(tx, requestId);
@@ -515,10 +562,19 @@ export async function rejectRequest(
   ctx: AuthContext,
   requestId: string,
   reason: string,
-): Promise<BloodRequestDto> {
+): Promise<DecisionOutcome> {
   await assertApprovedVerifier(ctx);
   if (reason.trim().length < 10) {
     throw new ConflictError('Provide a review reason of at least 10 characters.');
+  }
+
+  if (verificationMode(deps) === 'ON_CHAIN') {
+    const operation = await prepareAnchorOperation(deps, ctx, requestId, 'REJECT_REQUEST', reason);
+    return {
+      mode: 'ON_CHAIN',
+      operation,
+      request: await detailDto(deps, ctx, requestId),
+    };
   }
 
   await deps.db.transaction(async (tx) => {
@@ -654,7 +710,17 @@ export async function completeRequest(
   requestId: string,
   status: 'PARTIALLY_FULFILLED' | 'FULFILLED',
   note: string | null,
-): Promise<BloodRequestDto> {
+): Promise<DecisionOutcome> {
+  if (verificationMode(deps) === 'ON_CHAIN') {
+    // Honest fail-closed gating: in ON_CHAIN mode a requester (or admin)
+    // self-completion would create a database status the contract does not
+    // know about. Completion must be anchored by the verifying hospital.
+    throw new ConflictError(
+      'In on-chain mode, completion is recorded on the BloodBridge contract by the verifying hospital wallet. Use the on-chain completion flow instead.',
+      { requiredAction: 'FULFILL_REQUEST' },
+    );
+  }
+
   await deps.db.transaction(async (tx) => {
     const request = await lockLiveRequest(tx, requestId);
     if (request.requester_id !== ctx.user.id && !ctx.isAdmin) {
@@ -703,4 +769,28 @@ export async function completeRequest(
   });
 
   return detailDto(deps, ctx, requestId);
+}
+
+/**
+ * Hospital-only on-chain completion (ON_CHAIN mode): prepares the
+ * recordTerminalStatus anchor. The contract verifies the record is VERIFIED,
+ * and only the verifier wallet with VERIFIER_ROLE can submit it.
+ */
+export async function chainCompleteRequest(
+  deps: ServiceDeps,
+  ctx: AuthContext,
+  requestId: string,
+): Promise<DecisionOutcome> {
+  await assertApprovedVerifier(ctx);
+  if (verificationMode(deps) !== 'ON_CHAIN') {
+    throw new ConflictError(
+      'On-chain completion is only available when blockchain verification is active.',
+    );
+  }
+  const operation = await prepareAnchorOperation(deps, ctx, requestId, 'FULFILL_REQUEST');
+  return {
+    mode: 'ON_CHAIN',
+    operation,
+    request: await detailDto(deps, ctx, requestId),
+  };
 }

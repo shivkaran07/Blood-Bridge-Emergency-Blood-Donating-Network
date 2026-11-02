@@ -39,15 +39,13 @@ function readArtifact(): Artifact {
 }
 
 function abiIn(sourceName: string, contractName: string, abi: unknown): string {
-  const body = JSON.stringify(abi, null, 2).split('\n').join('\n  ');
+  const body = JSON.stringify(abi, null, 2);
   const out: string[] = [];
   out.push('/**');
   out.push(` * ${GENERATOR_NOTE}`);
   out.push(` * Source: ${sourceName} (${contractName}).`);
   out.push(' */');
-  out.push('export const BLOODBRIDGE_ABI = [');
-  out.push(`  ${body.trim()}`);
-  out.push('] as const;');
+  out.push(`export const BLOODBRIDGE_ABI = ${body} as const;`);
   out.push('');
   out.push(`export const BLOODBRIDGE_CONTRACT_NAME = '${contractName}';`);
   out.push('');

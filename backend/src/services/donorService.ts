@@ -13,7 +13,6 @@ import { haversineDistanceKm, maskName } from '../lib/crypto.js';
 import {
   ForbiddenError,
   NotFoundError,
-  UnprocessableError,
   ValidationError,
 } from '../lib/errors.js';
 import { toNumberOrNull } from '../lib/serialize.js';
@@ -28,7 +27,7 @@ import {
 } from './serializers.js';
 
 const MATCHING_NOTICE =
-  'Matches use exact recorded blood-group equality, availability, contact consent, city/area and optional consented distance. This is not a medical compatibility assessment; a hospital or blood bank must confirm compatibility and donor eligibility.';
+  'Matches use exact recorded blood-group equality, availability, contact consent, city/area and optional approximate location when provided. This is not a medical compatibility assessment; a hospital or blood bank must confirm compatibility and donor eligibility.';
 
 export async function getOwnDonorProfile(deps: ServiceDeps, ctx: AuthContext) {
   const donor = await findDonorByUserId(deps.db, ctx.user.id);
@@ -45,14 +44,6 @@ export async function upsertOwnDonorProfile(
 
   if (!existing && !input.privacyAccepted) {
     throw new ValidationError('You must accept the privacy information before creating a donor profile.');
-  }
-  if (
-    (input.latitude !== null || input.longitude !== null) &&
-    !input.consentToContact
-  ) {
-    throw new UnprocessableError(
-      'Approximate coordinates can only be stored when you consent to being contacted.',
-    );
   }
   if ((input.latitude === null) !== (input.longitude === null)) {
     throw new ValidationError('Provide both latitude and longitude, or neither.');

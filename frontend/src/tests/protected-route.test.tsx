@@ -13,8 +13,11 @@ const baseAuth: AuthContextValue = {
   error: null,
   refreshMe: vi.fn(async () => undefined),
   signIn: vi.fn(async () => undefined),
+  reauthenticate: vi.fn(async () => 'recent-session-token'),
   signUp: vi.fn(async () => ({ needsConfirmation: false })),
   signOut: vi.fn(async () => undefined),
+  resetPassword: vi.fn(async () => undefined),
+  updatePassword: vi.fn(async () => undefined),
 };
 
 function makeMe(): Me {
@@ -39,6 +42,8 @@ function makeMe(): Me {
       isApprovedVerifier: false,
     },
     profileComplete: true,
+    emailNotificationsEnabled: false,
+    emailNotificationsAvailable: false,
     donorProfile: null,
     hospitalProfile: null,
     unreadNotifications: 0,

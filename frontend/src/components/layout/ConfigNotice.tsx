@@ -8,7 +8,7 @@ import { Logo } from './Logo';
 export function ConfigNotice() {
   return (
     <div className="flex min-h-dvh flex-col bg-surface">
-      <header className="border-b border-ink-200 bg-white">
+      <header className="border-b border-ink-200 bg-surface-raised">
         <div className="mx-auto flex h-16 max-w-5xl items-center justify-between px-4 sm:px-6">
           <Logo />
           <Link
@@ -22,7 +22,7 @@ export function ConfigNotice() {
       </header>
       <main className="mx-auto w-full max-w-2xl flex-1 px-4 py-12 sm:px-6">
         <Card className="p-6 sm:p-8">
-          <span className="flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-accent">
             <Settings2 className="size-6" aria-hidden="true" />
           </span>
           <h1 className="mt-5 text-xl font-semibold text-ink-900">Connect the frontend to Supabase</h1>
@@ -38,8 +38,8 @@ export function ConfigNotice() {
               : 'Supabase environment values were not found at build time.'}
           </Alert>
 
-          <div className="mt-6 rounded-xl border border-ink-200 bg-ink-950 p-4 text-xs text-ink-100">
-            <div className="mb-2 flex items-center gap-2 text-ink-400">
+          <div className="mt-6 rounded-xl border border-white/10 bg-inverse p-4 text-xs text-white/80">
+            <div className="mb-2 flex items-center gap-2 text-ink-500">
               <TerminalSquare className="size-4" aria-hidden="true" />
               <span className="font-medium">frontend/.env</span>
             </div>
@@ -56,7 +56,7 @@ VITE_API_BASE_URL=${env.apiBaseUrl}`}</code>
             <li>3. Restart the Vite dev server so the new environment values are loaded.</li>
           </ol>
 
-          <p className="mt-6 text-xs leading-relaxed text-ink-400">
+          <p className="mt-6 text-xs leading-relaxed text-ink-500">
             Setup details and the complete checklist are in the repository README and
             <code className="mx-1 rounded bg-ink-100 px-1 py-0.5">docs/setup.md</code>.
           </p>

@@ -45,7 +45,7 @@ export function ResponseCard({
     canComplete && response.responseStatus === 'ACCEPTED' && Boolean(onComplete);
 
   return (
-    <article className="rounded-xl border border-ink-200 bg-white p-4 sm:p-5">
+    <article className="rounded-xl border border-ink-200 bg-surface-raised p-4 sm:p-5">
       <div className="flex flex-wrap items-start gap-4">
         <BloodGroupMark group={response.donorBloodGroup ?? '—'} size="sm" />
         <div className="min-w-0 flex-1">
@@ -53,7 +53,7 @@ export function ResponseCard({
             <p className="font-semibold text-ink-900">
               {response.donorDisplayName}
               {response.isOwn ? (
-                <span className="ml-2 text-xs font-medium text-ink-400">you</span>
+                <span className="ml-2 text-xs font-medium text-ink-500">you</span>
               ) : null}
             </p>
             <ResponseStatusBadge status={response.responseStatus} />
@@ -101,7 +101,7 @@ export function ResponseCard({
                 <Building2 className="size-3.5" aria-hidden="true" />
                 <Link
                   to={`/app/requests/${response.request.id}`}
-                  className="font-semibold text-ink-800 hover:text-brand-700"
+                  className="font-semibold text-ink-800 hover:text-brand-accent"
                 >
                   {response.request.hospitalName}
                 </Link>
@@ -151,7 +151,7 @@ export function ResponseCard({
               Mark response complete
             </Button>
           ) : null}
-          <span className="text-xs text-ink-400">
+          <span className="text-xs text-ink-500">
             Completion is an application acknowledgement, not medical proof.
           </span>
         </div>

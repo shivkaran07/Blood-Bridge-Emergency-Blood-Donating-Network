@@ -49,8 +49,8 @@ Returns phase and an explicit blockchain statement (`operational: false`, mode `
 ## 2. Profile
 
 ### `GET /me` — authenticated
-Returns the current user, profile, roles, permission flags, donor profile, hospital profile and
-unread notification count.
+Returns the current user, profile, roles, permission flags, donor profile, hospital profile,
+email-alert preference/availability, and unread notification count.
 
 ### `PATCH /me` — authenticated, write-rate-limited
 Body:
@@ -66,6 +66,30 @@ Body:
 ```
 
 All fields are validated and trimmed. The account status and roles cannot be changed here.
+
+### `PATCH /me/email-notifications` — authenticated, write-rate-limited
+Explicitly enables or disables generic email alerts. Enabling is rejected unless this deployment
+has configured Resend. The preference defaults off; email bodies contain no request or health
+details. Disabling expires queued messages that have not yet been sent.
+
+```json
+{ "enabled": true }
+```
+
+### `DELETE /me` — authenticated, write-rate-limited, recent reauthentication required
+The frontend prompts for the current password and sends the fresh Supabase access token. The API
+also checks that the verified token's `auth_time` is no more than five minutes old and requires an
+exact confirmation body:
+
+```json
+{ "confirmation": "DELETE" }
+```
+
+This performs BloodBridge account anonymization, not deletion of a linked external identity-provider
+account. It disables sign-in, removes direct profile/donor/hospital/wallet details and notifications,
+scrubs request contact/message/location fields, cancels active requests, and retains anonymized
+request and audit history. The final administrator cannot close their account. If the Auth provider
+update fails after database anonymization, the API reports the failure and permits a retry.
 
 ---
 
@@ -88,8 +112,10 @@ Creates or updates the caller's donor profile.
 }
 ```
 
-Rules: latitude/longitude must be supplied together, and coordinates require
-`consentToContact: true`.
+Rules: latitude/longitude must be supplied together. Providing coordinates is a separate,
+optional approximate-location choice and does not require `consentToContact: true`. Omit both
+coordinates to keep location sharing off. Coordinates are used only for distance estimates and
+are never returned in matching results.
 
 ### `PATCH /donor/availability` — authenticated, write-rate-limited
 ```json

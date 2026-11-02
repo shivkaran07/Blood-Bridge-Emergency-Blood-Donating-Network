@@ -59,13 +59,14 @@ export function AdminAuditPage() {
         description="Request lifecycle events, verification decisions, donor responses and account actions recorded by the backend."
       />
 
-      <Alert variant="neutral" title="Application audit, not blockchain audit">
-        These rows are stored in PostgreSQL and protected by backend authorization plus RLS. Part 1
-        does not create on-chain transactions. The audit reference fields are prepared for Part 2.
+      <Alert variant="neutral" title="Application audit, not clinical proof">
+        These rows are stored in PostgreSQL and protected by backend authorization plus RLS.
+        On-chain anchoring, where enabled, records an opaque audit reference — it never replaces
+        this application audit log or a clinical check.
       </Alert>
 
       <form
-        className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-card sm:p-5"
+        className="rounded-xl border border-ink-200/90 bg-surface-raised p-4 shadow-card sm:p-5"
         onSubmit={(event) => {
           event.preventDefault();
           setEventType(eventTypeDraft);
@@ -121,7 +122,7 @@ export function AdminAuditPage() {
         <ErrorState message={errorMessage(audit.error)} onRetry={() => void audit.refetch()} />
       ) : audit.data && audit.data.items.length > 0 ? (
         <>
-          <div className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-card sm:p-5">
+          <div className="rounded-xl border border-ink-200/90 bg-surface-raised p-4 shadow-card sm:p-5">
             <AuditEventTable items={audit.data.items} />
           </div>
           <Pagination
@@ -147,7 +148,7 @@ export function AdminAuditPage() {
         />
       )}
 
-      <div className="flex items-start gap-2 text-xs leading-relaxed text-ink-400">
+      <div className="flex items-start gap-2 text-xs leading-relaxed text-ink-500">
         <Search className="mt-0.5 size-3.5 shrink-0" aria-hidden="true" />
         Audit metadata is deliberately non-sensitive. Authentication tokens, passwords and full
         contact details are not written to this log.

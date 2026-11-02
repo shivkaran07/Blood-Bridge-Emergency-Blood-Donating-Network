@@ -26,7 +26,7 @@ export const requestStatusLabels: Record<RequestStatus, string> = {
   SUBMITTED: 'Submitted',
   UNDER_REVIEW: 'Under review',
   VERIFIED: 'Verified',
-  REJECTED: 'Not verified',
+  REJECTED: 'Rejected',
   PARTIALLY_FULFILLED: 'Partially fulfilled',
   FULFILLED: 'Fulfilled',
   CANCELLED: 'Cancelled',
@@ -53,7 +53,7 @@ export const notificationLabels: Record<string, string> = {
   REQUEST_SUBMITTED: 'Request submitted',
   REQUEST_UNDER_REVIEW: 'Request under review',
   REQUEST_VERIFIED: 'Request verified',
-  REQUEST_REJECTED: 'Request not verified',
+  REQUEST_REJECTED: 'Request rejected',
   DONOR_RESPONSE_RECEIVED: 'Donor response',
   DONOR_RESPONSE_ACCEPTED: 'Offer accepted',
   DONOR_RESPONSE_DECLINED: 'Offer declined',
@@ -102,5 +102,5 @@ export const emergencyNotice =
 export const matchingNotice =
   'Matches use exact recorded blood-group equality, availability and general location only. This is not a medical compatibility assessment. A hospital or blood bank must confirm compatibility and donor eligibility.';
 
-export const part1Notice =
-  'Part 1 verification is database-backed. No smart contract is deployed and no blockchain transaction is created.';
+export const auditScopeNotice =
+  'Hospital review is recorded in the application database. Where an optional on-chain audit layer is configured, a confirmed transaction proves only that an authorized wallet submitted a decision. It never proves medical facts, blood availability or compatibility.';

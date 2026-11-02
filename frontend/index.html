@@ -3,13 +3,37 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <meta name="theme-color" content="#b61138" />
+    <meta id="theme-color" name="theme-color" content="#f5f7f8" />
     <meta
       name="description"
-      content="BloodBridge connects requesters, donors and hospital verifiers for emergency blood requests. Part 1 provides database-backed verification; blockchain anchoring is planned for Part 2."
+      content="BloodBridge coordinates blood donation requests, donors and hospital review. Decisions are recorded in the application; optional wallet-signed anchoring is an audit signal, never medical proof."
     />
+    <meta name="color-scheme" content="light dark" />
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
-    <title>BloodBridge — Emergency blood donation network</title>
+    <title>BloodBridge — Blood donation coordination network</title>
+    <script>
+      // Apply the saved theme before first paint to avoid a light flash.
+      (function () {
+        try {
+          var stored = window.localStorage.getItem('bloodbridge.theme');
+          var preference =
+            stored === 'light' || stored === 'dark' || stored === 'system' ? stored : 'system';
+          var dark =
+            preference === 'dark' ||
+            (preference === 'system' &&
+              typeof window.matchMedia === 'function' &&
+              window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var root = document.documentElement;
+          root.classList.toggle('dark', dark);
+          root.style.colorScheme = dark ? 'dark' : 'light';
+          root.dataset.theme = dark ? 'dark' : 'light';
+          var meta = document.getElementById('theme-color');
+          if (meta) meta.setAttribute('content', dark ? '#0b1115' : '#f5f7f8');
+        } catch (error) {
+          /* Storage may be blocked; the default light theme still renders. */
+        }
+      })();
+    </script>
   </head>
   <body>
     <div id="root"></div>

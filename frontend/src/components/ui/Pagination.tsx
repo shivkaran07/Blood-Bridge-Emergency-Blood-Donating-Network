@@ -14,7 +14,7 @@ export function Pagination({
   onChange: (offset: number) => void;
   itemLabel?: string;
 }) {
-  if (total === 0) return null;
+  if (total <= limit) return null;
   const start = Math.min(offset + 1, total);
   const end = Math.min(offset + limit, total);
   const hasPrevious = offset > 0;

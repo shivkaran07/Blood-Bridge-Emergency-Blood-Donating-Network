@@ -162,13 +162,13 @@ export function NewRequestPage() {
         title="Create a blood request"
         description="Record an accurate need. A hospital verifier must review it before it enters the donor feed."
         actions={
-          <Link to="/app/my-requests" className="text-sm font-semibold text-ink-600 hover:text-ink-900">
+          <Link to="/app/my-requests" className="inline-flex min-h-11 items-center text-sm font-semibold text-ink-600 hover:text-ink-900">
             Back to my requests
           </Link>
         }
       />
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,0.8fr)]">
         <form onSubmit={onSubmit} noValidate className="space-y-5">
           {formError ? <FormError>{formError}</FormError> : null}
 
@@ -279,7 +279,7 @@ export function NewRequestPage() {
             </div>
 
             <details className="rounded-xl border border-ink-200 bg-ink-50/60 p-4">
-              <summary className="cursor-pointer text-sm font-medium text-ink-800">
+              <summary className="flex min-h-11 cursor-pointer items-center text-sm font-medium text-ink-800">
                 Optional approximate hospital coordinates
               </summary>
               <p className="mt-2 text-xs leading-relaxed text-ink-500">
@@ -322,7 +322,7 @@ export function NewRequestPage() {
               hint="Used by an accepted donor or reviewing hospital to coordinate."
             >
               <div className="relative">
-                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+                <Phone className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
                 <Input
                   id="contactPhone"
                   className="pl-9"
@@ -341,7 +341,7 @@ export function NewRequestPage() {
               {...register('contactShareConsent')}
             />
             {errors.contactShareConsent?.message ? (
-              <p className="text-xs font-medium text-brand-700" role="alert">
+              <p className="text-xs font-medium text-brand-accent" role="alert">
                 {errors.contactShareConsent.message}
               </p>
             ) : null}
@@ -353,14 +353,14 @@ export function NewRequestPage() {
               {...register('accuracyConfirmed')}
             />
             {errors.accuracyConfirmed?.message ? (
-              <p className="text-xs font-medium text-brand-700" role="alert">
+              <p className="text-xs font-medium text-brand-accent" role="alert">
                 {errors.accuracyConfirmed.message}
               </p>
             ) : null}
           </SectionCard>
 
           <div className="flex flex-wrap items-center justify-end gap-2">
-            <Link to="/app/my-requests" className="px-3 py-2 text-sm font-medium text-ink-500 hover:text-ink-800">
+            <Link to="/app/my-requests" className="inline-flex min-h-11 items-center px-3 text-sm font-medium text-ink-500 hover:text-ink-800">
               Cancel
             </Link>
             <Button
@@ -375,12 +375,12 @@ export function NewRequestPage() {
         </form>
 
         <aside className="space-y-4">
-          <Card className="bg-ink-950 text-white">
-            <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-brand-200">
+          <div className="rounded-xl border border-white/10 bg-inverse p-5 text-white shadow-card sm:p-6">
+            <span className="flex size-10 items-center justify-center rounded-xl bg-white/10 text-brand-300">
               <ShieldCheck className="size-5" aria-hidden="true" />
             </span>
-            <h2 className="mt-4 text-base font-semibold">What happens next</h2>
-            <ol className="mt-3 space-y-3 text-sm text-ink-300">
+            <h2 className="mt-4 text-base font-semibold text-white">What happens next</h2>
+            <ol className="mt-3 space-y-3 text-sm text-white/65">
               <li className="flex gap-2.5">
                 <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-bold">1</span>
                 An approved hospital verifier reviews hospital, blood group and deadline details.
@@ -398,7 +398,7 @@ export function NewRequestPage() {
                 Record completion after hospital procedures. It is not medical proof of donation.
               </li>
             </ol>
-          </Card>
+          </div>
 
           <Alert variant="info" title="Matching scope">
             {matchingNotice}
@@ -412,29 +412,30 @@ export function NewRequestPage() {
             <h2 className="text-sm font-semibold text-ink-900">Privacy reminders</h2>
             <ul className="mt-3 space-y-2 text-xs leading-relaxed text-ink-600">
               <li className="flex gap-2">
-                <Info className="mt-0.5 size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                <Info className="mt-0.5 size-3.5 shrink-0 text-ink-500" aria-hidden="true" />
                 Do not include patient names, diagnoses or record numbers in the public message.
               </li>
               <li className="flex gap-2">
-                <MapPin className="mt-0.5 size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                <MapPin className="mt-0.5 size-3.5 shrink-0 text-ink-500" aria-hidden="true" />
                 Only the hospital area and city are shown to matched donors.
               </li>
               <li className="flex gap-2">
-                <Clock3 className="mt-0.5 size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                <Clock3 className="mt-0.5 size-3.5 shrink-0 text-ink-500" aria-hidden="true" />
                 Requests expire automatically when the required-by time passes.
               </li>
               <li className="flex gap-2">
-                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-ink-400" aria-hidden="true" />
+                <AlertTriangle className="mt-0.5 size-3.5 shrink-0 text-ink-500" aria-hidden="true" />
                 You can cancel before fulfilment if blood is no longer needed.
               </li>
             </ul>
           </Card>
 
           <Card className="flex items-start gap-3">
-            <Building2 className="mt-0.5 size-5 shrink-0 text-ink-400" aria-hidden="true" />
+            <Building2 className="mt-0.5 size-5 shrink-0 text-ink-500" aria-hidden="true" />
             <p className="text-xs leading-relaxed text-ink-500">
-              Hospital verification in Part 1 is database-backed. No contract is deployed and no
-              blockchain transaction is created.
+              Hospital review decisions are recorded in the application database. If the deployment
+              enables the audit layer, an authorized wallet may add an on-chain anchor. That anchor
+              never replaces clinical checks.
             </p>
           </Card>
         </aside>

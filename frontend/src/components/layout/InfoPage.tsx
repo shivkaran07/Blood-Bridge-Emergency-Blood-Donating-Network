@@ -20,7 +20,7 @@ export function InfoPage({
     <div className="mx-auto w-full max-w-4xl px-4 py-10 sm:px-6 lg:py-14">
       <PageHeader eyebrow={eyebrow} title={title} description={description} />
       <div className="mt-8 space-y-8">{children}</div>
-      <p className="mt-10 border-t border-ink-200 pt-5 text-xs leading-relaxed text-ink-400">
+      <p className="mt-10 border-t border-ink-200 pt-5 text-xs leading-relaxed text-ink-500">
         BloodBridge is an educational prototype. It does not replace clinical compatibility
         testing, professional medical advice, donor eligibility assessment or hospital procedures.
         For a life-threatening emergency, contact your local emergency number and the hospital

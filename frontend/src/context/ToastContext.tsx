@@ -29,9 +29,9 @@ interface ToastContextValue {
 const ToastContext = createContext<ToastContextValue | null>(null);
 
 const variantStyles: Record<ToastVariant, string> = {
-  success: 'border-accent-200 bg-white text-ink-900',
-  error: 'border-brand-200 bg-white text-ink-900',
-  info: 'border-ink-200 bg-white text-ink-900',
+  success: 'border-accent-200 bg-surface-raised text-ink-900',
+  error: 'border-brand-200 bg-surface-raised text-ink-900',
+  info: 'border-ink-200 bg-surface-raised text-ink-900',
 };
 
 export function ToastProvider({ children }: { children: ReactNode }) {
@@ -97,7 +97,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
             toast.variant === 'success'
               ? 'text-accent-600'
               : toast.variant === 'error'
-                ? 'text-brand-600'
+                ? 'text-brand-accent'
                 : 'text-ink-500';
           return (
             <div
@@ -115,7 +115,7 @@ export function ToastProvider({ children }: { children: ReactNode }) {
               <button
                 type="button"
                 onClick={() => dismiss(toast.id)}
-                className="rounded-md p-1 text-ink-400 transition hover:bg-ink-100 hover:text-ink-700"
+                className="rounded-md p-1 text-ink-500 transition hover:bg-ink-100 hover:text-ink-700"
                 aria-label="Dismiss notification"
               >
                 <X className="size-4" />

@@ -26,8 +26,8 @@ const toneClasses: Record<BadgeTone, string> = {
   info: 'border-sky-200 bg-sky-50 text-sky-800',
   success: 'border-accent-200 bg-accent-50 text-accent-800',
   warning: 'border-amber-200 bg-amber-50 text-amber-800',
-  danger: 'border-brand-200 bg-brand-50 text-brand-800',
-  brand: 'border-brand-700 bg-brand-700 text-white',
+  danger: 'border-brand-200 bg-brand-50 text-brand-accent',
+  brand: 'border-brand-800 bg-brand-700 text-white',
   outline: 'border-ink-300 bg-transparent text-ink-600',
 };
 
@@ -41,13 +41,13 @@ export function Badge({ tone = 'neutral', dot, className, children, ...props }: 
   return (
     <span
       className={cn(
-        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2.5 py-0.5 text-xs font-semibold',
+        'inline-flex items-center gap-1.5 whitespace-nowrap rounded-full border px-2 py-0.5 text-[0.6875rem] font-semibold leading-4 tracking-[0.005em]',
         toneClasses[tone],
         className,
       )}
       {...props}
     >
-      {dot ? <span className="size-1.5 rounded-full bg-current" aria-hidden="true" /> : null}
+      {dot ? <span className="size-1.5 shrink-0 rounded-full bg-current" aria-hidden="true" /> : null}
       {children}
     </span>
   );
@@ -115,6 +115,7 @@ const syncTone: Record<BlockchainSyncStatus, BadgeTone> = {
   SUBMITTED: 'info',
   CONFIRMED: 'success',
   FAILED: 'danger',
+  NEEDS_RECONCILIATION: 'warning',
 };
 
 export function BlockchainStatusBadge({ status }: { status: BlockchainSyncStatus }) {
@@ -128,8 +129,8 @@ export function BlockchainStatusBadge({ status }: { status: BlockchainSyncStatus
 }
 
 /**
- * Explicitly distinguishes Part 1 database verification from any future
- * on-chain verification. Never labels a request "blockchain verified".
+ * Distinguishes an application decision from a transaction confirmed by the
+ * backend against the configured chain.
  */
 export function VerificationTag({
   status,
@@ -144,8 +145,8 @@ export function VerificationTag({
   if (status === 'VERIFIED' || status === 'PARTIALLY_FULFILLED' || status === 'FULFILLED') {
     return (
       <span className="inline-flex flex-wrap items-center gap-1.5">
-        <Badge tone="success">Database verified</Badge>
-        <Badge tone="outline">No on-chain anchor</Badge>
+        <Badge tone="success">{blockchainStatus === 'CONFIRMED' ? 'On-chain transaction confirmed' : 'Application verified'}</Badge>
+        {blockchainStatus !== 'CONFIRMED' ? <Badge tone="outline">No confirmed on-chain anchor</Badge> : null}
       </span>
     );
   }

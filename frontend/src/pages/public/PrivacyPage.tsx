@@ -6,7 +6,7 @@ export function PrivacyPage() {
     <InfoPage
       eyebrow="Privacy"
       title="Privacy notice"
-      description="What BloodBridge stores, who can see it, and the controls that limit exposure. This notice describes the Part 1 prototype; it is not a legal compliance certification."
+      description="What BloodBridge stores, who can see it, and the controls that limit exposure. This notice describes an educational prototype; it is not a legal compliance certification."
     >
       <Alert variant="info" title="Prototype scope">
         This is an educational application. Do not enter real patient information, real medical
@@ -35,7 +35,7 @@ export function PrivacyPage() {
         </p>
         <p>
           The application does not run advertising, sell data or use third-party analytics. It does
-          not send email, SMS or push notifications in Part 1.
+          not send external email, SMS or push notifications.
         </p>
       </InfoSection>
 
@@ -76,9 +76,10 @@ export function PrivacyPage() {
           ]}
         />
         <p>
-          Part 1 does not include a self-service account deletion or data-export workflow. In a real
-          deployment, the operator would need a documented process for access, correction and
-          deletion requests. Contact the project operator for this prototype.
+          This prototype includes a self-service JSON export from the profile page. It does not
+          include self-service account deletion. In a real deployment, the operator would need a
+          documented process for access, correction and deletion requests. Contact the project
+          operator for this prototype.
         </p>
       </InfoSection>
 

@@ -3,6 +3,7 @@ import type { z } from 'zod';
 import type { ServiceDeps } from '../services/deps.js';
 import {
   cancelBloodRequest,
+  chainCompleteRequest,
   claimRequestForReview,
   completeRequest,
   createBloodRequest,
@@ -109,4 +110,10 @@ export async function rejectRequestController(deps: ServiceDeps, req: Request, r
   const { id } = parseParams(idParamSchema, req.params);
   const input = req.body as z.infer<typeof rejectRequestSchema>;
   ok(res, await rejectRequest(deps, req.auth!, id, input.reason));
+}
+
+/** Hospital-only on-chain completion (ON_CHAIN mode). */
+export async function chainCompleteController(deps: ServiceDeps, req: Request, res: Response) {
+  const { id } = parseParams(idParamSchema, req.params);
+  ok(res, await chainCompleteRequest(deps, req.auth!, id));
 }

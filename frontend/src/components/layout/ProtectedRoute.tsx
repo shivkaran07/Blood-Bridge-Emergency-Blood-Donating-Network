@@ -17,12 +17,12 @@ export function ProtectedRoute() {
     return (
       <div className="flex min-h-dvh items-center justify-center bg-surface px-4 py-12">
         <Card className="w-full max-w-lg p-6 sm:p-8">
-          <span className="flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+          <span className="flex size-12 items-center justify-center rounded-xl bg-brand-50 text-brand-accent">
             <ShieldX className="size-6" aria-hidden="true" />
           </span>
           <h1 className="mt-5 text-xl font-semibold text-ink-900">We could not open your workspace</h1>
           <p className="mt-2 text-sm leading-relaxed text-ink-600">{auth.error}</p>
-          <p className="mt-2 text-xs leading-relaxed text-ink-400">
+          <p className="mt-2 text-xs leading-relaxed text-ink-500">
             If the API is unreachable, confirm the backend is running and that
             <code className="mx-1 rounded bg-ink-100 px-1 py-0.5">VITE_API_BASE_URL</code>
             points to it. An administrator may also have suspended the account.
@@ -101,7 +101,7 @@ export function AccessDenied({
 }) {
   return (
     <div className="mx-auto flex max-w-2xl flex-col items-center py-16 text-center">
-      <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+      <span className="flex size-14 items-center justify-center rounded-xl bg-brand-50 text-brand-accent">
         <ShieldX className="size-7" aria-hidden="true" />
       </span>
       <h1 className="mt-5 text-xl font-semibold text-ink-900">{title}</h1>

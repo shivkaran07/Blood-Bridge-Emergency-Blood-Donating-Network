@@ -9,6 +9,7 @@ import {
   type ProfileUpdateInput,
 } from '../repositories/profileRepository.js';
 import { writeAudit } from './notificationService.js';
+import { NotFoundError, ServiceUnavailableError } from '../lib/errors.js';
 import { toDonorProfileDto, toHospitalProfileDto, toProfileDto, type MeDto } from './serializers.js';
 
 export async function getMe(deps: ServiceDeps, ctx: AuthContext): Promise<MeDto> {
@@ -37,6 +38,10 @@ export async function getMe(deps: ServiceDeps, ctx: AuthContext): Promise<MeDto>
       isApprovedVerifier: ctx.isApprovedHospital,
     },
     profileComplete,
+    emailNotificationsEnabled: profile.email_notifications_enabled,
+    emailNotificationsAvailable: Boolean(
+      deps.config.email.resendApiKey && deps.config.email.fromAddress,
+    ),
     donorProfile: donor ? toDonorProfileDto(donor) : null,
     hospitalProfile: hospital ? toHospitalProfileDto(hospital) : null,
     unreadNotifications: unread,
@@ -59,4 +64,46 @@ export async function updateOwnProfile(
     },
   });
   return toProfileDto(updated);
+}
+
+export async function updateEmailNotifications(
+  deps: ServiceDeps,
+  ctx: AuthContext,
+  enabled: boolean,
+): Promise<{ enabled: boolean }> {
+  if (enabled && (!deps.config.email.resendApiKey || !deps.config.email.fromAddress)) {
+    throw new ServiceUnavailableError(
+      'Email alerts are not configured by this BloodBridge deployment.',
+    );
+  }
+  return deps.db.transaction(async (tx) => {
+    const updated = await tx.query<{ email_notifications_enabled: boolean }>(
+      `update public.profiles
+          set email_notifications_enabled = $2
+        where id = $1
+        returning email_notifications_enabled`,
+      [ctx.user.id, enabled],
+    );
+    if (!updated.rows[0]) throw new NotFoundError('Profile not found.');
+
+    if (!enabled) {
+      await tx.query(
+        `update public.notification_email_outbox o
+            set status = 'EXPIRED', lease_expires_at = null
+           from public.notifications n
+          where o.notification_id = n.id
+            and n.recipient_user_id = $1
+            and o.status in ('PENDING', 'SENDING')`,
+        [ctx.user.id],
+      );
+    }
+
+    await writeAudit(tx, {
+      actorUserId: ctx.user.id,
+      requestId: null,
+      eventType: 'PROFILE_UPDATED',
+      metadata: { fields: ['email_notifications_enabled'] },
+    });
+    return { enabled: updated.rows[0].email_notifications_enabled };
+  });
 }

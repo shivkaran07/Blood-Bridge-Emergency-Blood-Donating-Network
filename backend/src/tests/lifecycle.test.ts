@@ -181,6 +181,28 @@ describe('matching, withdrawal and lifecycle edges', () => {
     expect(JSON.stringify(matches.body.data)).not.toContain('latitude');
     expect(matches.body.data.matchingNotice).toContain('not a medical compatibility assessment');
 
+    for (const ineligibleDonor of [noConsentDonor, unavailableDonor]) {
+      const dashboard = await request(app)
+        .get('/api/v1/dashboard')
+        .set('Authorization', bearer(ineligibleDonor))
+        .expect(200);
+      expect(dashboard.body.data.donor.availableRequests).toBe(0);
+    }
+
+    const privateDonorFeed = await request(app)
+      .get('/api/v1/requests/feed?bloodGroup=O%2B')
+      .set('Authorization', bearer(noConsentDonor))
+      .expect(200);
+    const privateDonorRequest = privateDonorFeed.body.data.items.find(
+      (item: { id: string }) => item.id === requestId,
+    );
+    expect(privateDonorRequest.permissions.canRespond).toBe(false);
+
+    await request(app)
+      .post(`/api/v1/requests/${requestId}/respond`)
+      .set('Authorization', bearer(noConsentDonor))
+      .expect(403);
+
     // A stranger cannot see donor matches for someone else's request.
     await request(app)
       .get(`/api/v1/requests/${requestId}/matches`)

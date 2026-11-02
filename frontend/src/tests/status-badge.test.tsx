@@ -22,11 +22,17 @@ describe('verification wording', () => {
     expect(screen.queryByText(/database verified/i)).not.toBeInTheDocument();
   });
 
-  it('labels database verification and denies an on-chain anchor', () => {
+  it('labels application verification without claiming a chain anchor', () => {
     render(<VerificationTag status="VERIFIED" blockchainStatus="NOT_SCHEDULED" />);
-    expect(screen.getByText('Database verified')).toBeInTheDocument();
-    expect(screen.getByText('No on-chain anchor')).toBeInTheDocument();
+    expect(screen.getByText('Application verified')).toBeInTheDocument();
+    expect(screen.getByText('No confirmed on-chain anchor')).toBeInTheDocument();
     expect(screen.queryByText(/blockchain verified/i)).not.toBeInTheDocument();
+  });
+
+  it('shows a real confirmed on-chain transaction distinctly', () => {
+    render(<VerificationTag status="VERIFIED" blockchainStatus="CONFIRMED" />);
+    expect(screen.getByText('On-chain transaction confirmed')).toBeInTheDocument();
+    expect(screen.queryByText('No confirmed on-chain anchor')).not.toBeInTheDocument();
   });
 
   it('does not claim database verification when a request was rejected', () => {

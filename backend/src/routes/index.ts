@@ -50,7 +50,12 @@ import {
   updateAvailabilityController,
   upsertDonorProfileController,
 } from '../controllers/donorController.js';
-import { getMeController, updateMeController } from '../controllers/profileController.js';
+import {
+  anonymizeAccountController,
+  getMeController,
+  updateEmailNotificationsController,
+  updateMeController,
+} from '../controllers/profileController.js';
 import {
   blockchainStatusController,
   dashboardController,
@@ -65,10 +70,12 @@ import {
   adminUserStatusSchema,
   adminUsersQuerySchema,
   availabilitySchema,
+  anonymizeAccountSchema,
   cancelRequestSchema,
   completeRequestSchema,
   createRequestSchema,
   donorProfileSchema,
+  emailNotificationsSchema,
   feedQuerySchema,
   hospitalApplicationSchema,
   hospitalApplicationsQuerySchema,
@@ -76,13 +83,32 @@ import {
   hospitalDecisionSchema,
   hospitalQueueQuerySchema,
   notificationsQuerySchema,
+  operationsQuerySchema,
   paginationSchema,
   rejectRequestSchema,
   requestListQuerySchema,
   responseDecisionSchema,
   updateProfileSchema,
   verifyRequestSchema,
+  walletChallengeSchema,
+  anchorConfirmSchema,
+  walletVerifySchema,
 } from '../schemas/index.js';
+import { deriveVerificationMode } from '../config/env.js';
+import {
+  confirmAnchorOperationController,
+  listBlockchainOperationsController,
+  reconcileAnchorOperationController,
+} from '../controllers/anchorController.js';
+import {
+  issueWalletChallengeController,
+  unbindWalletController,
+  verifyWalletChallengeController,
+  walletStatusController,
+} from '../controllers/walletController.js';
+import {
+  chainCompleteController,
+} from '../controllers/requestController.js';
 
 export function createApiRouter(
   deps: ServiceDeps,
@@ -90,6 +116,8 @@ export function createApiRouter(
   limiters: RateLimiters,
 ): Router {
   const router = Router();
+
+  const verificationMode = deriveVerificationMode(deps.config.blockchain);
 
   // Public, non-sensitive discovery endpoints.
   router.get('/health', asyncHandler(async (_req, res) => {
@@ -99,7 +127,7 @@ export function createApiRouter(
         status: 'ok',
         service: 'bloodbridge-api',
         database: 'reachable',
-        phase: 'PART_1',
+        phase: 'PART_2',
         time: new Date().toISOString(),
       },
     });
@@ -108,14 +136,19 @@ export function createApiRouter(
   router.get('/meta', (_req, res) => {
     res.json({
       data: {
-        phase: 'PART_1',
+        phase: 'PART_2',
         product: 'BloodBridge',
         description:
-          'Emergency blood donation and hospital verification network. Part 1 is database-backed; blockchain integration is not yet active.',
+          'Emergency blood donation and hospital verification network with role-based access control and on-chain decision anchoring.',
         blockchain: {
-          operational: false,
-          verificationMode: 'DATABASE',
-          note: 'No smart contract is deployed and no on-chain transaction is created in Part 1.',
+          verificationMode,
+          contractConfigured: Boolean(deps.config.blockchain.contractAddress),
+          operational:
+            verificationMode === 'ON_CHAIN' && deps.chain !== null,
+          note:
+            verificationMode === 'ON_CHAIN'
+              ? 'Hospital decisions are anchored on the BloodBridge contract by wallet-signed transactions verified by this backend.'
+              : 'No contract is configured; verification is database-backed and no transactions are created.',
         },
       },
     });
@@ -130,6 +163,18 @@ export function createApiRouter(
     limiters.write,
     validateBody(updateProfileSchema),
     asyncHandler((req, res) => updateMeController(deps, req, res)),
+  );
+  router.patch(
+    '/me/email-notifications',
+    limiters.write,
+    validateBody(emailNotificationsSchema),
+    asyncHandler((req, res) => updateEmailNotificationsController(deps, req, res)),
+  );
+  router.delete(
+    '/me',
+    limiters.write,
+    validateBody(anonymizeAccountSchema),
+    asyncHandler((req, res) => anonymizeAccountController(deps, req, res)),
   );
 
   // ------------------------------ Donor ------------------------------------
@@ -199,6 +244,12 @@ export function createApiRouter(
     limiters.write,
     validateBody(completeRequestSchema),
     asyncHandler((req, res) => completeRequestController(deps, req, res)),
+  );
+  router.post(
+    '/requests/:id/chain-complete',
+    limiters.write,
+    requireApprovedHospital(),
+    asyncHandler((req, res) => chainCompleteController(deps, req, res)),
   );
   router.post(
     '/requests/:id/claim',
@@ -298,6 +349,42 @@ export function createApiRouter(
   router.get(
     '/blockchain/status',
     asyncHandler((req, res) => blockchainStatusController(deps, req, res)),
+  );
+  router.get(
+    '/blockchain/operations',
+    validateQuery(operationsQuerySchema),
+    asyncHandler((req, res) => listBlockchainOperationsController(deps, req, res)),
+  );
+  router.post(
+    '/blockchain/operations/:id/confirm',
+    limiters.write,
+    validateBody(anchorConfirmSchema),
+    asyncHandler((req, res) => confirmAnchorOperationController(deps, req, res)),
+  );
+  router.post(
+    '/blockchain/operations/:id/reconcile',
+    limiters.write,
+    asyncHandler((req, res) => reconcileAnchorOperationController(deps, req, res)),
+  );
+
+  // --------------------- Wallet ownership (Part 2) -------------------------
+  router.post(
+    '/wallet/challenge',
+    limiters.write,
+    validateBody(walletChallengeSchema),
+    asyncHandler((req, res) => issueWalletChallengeController(deps, req, res)),
+  );
+  router.post(
+    '/wallet/verify',
+    limiters.write,
+    validateBody(walletVerifySchema),
+    asyncHandler((req, res) => verifyWalletChallengeController(deps, req, res)),
+  );
+  router.get('/wallet/status', asyncHandler((req, res) => walletStatusController(deps, req, res)));
+  router.delete(
+    '/wallet/binding',
+    limiters.write,
+    asyncHandler((req, res) => unbindWalletController(deps, req, res)),
   );
 
   // -------------------------------- Admin ----------------------------------

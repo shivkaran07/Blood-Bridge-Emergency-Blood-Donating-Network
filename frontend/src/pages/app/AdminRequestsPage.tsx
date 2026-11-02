@@ -136,7 +136,7 @@ export function AdminRequestsPage() {
                 <div className="min-w-0 flex-1">
                   <Link
                     to={`/app/requests/${item.request.id}`}
-                    className="text-sm font-semibold text-ink-900 hover:text-brand-700"
+                    className="text-sm font-semibold text-ink-900 hover:text-brand-accent"
                   >
                     {item.request.hospitalName} · {item.request.bloodGroup}
                   </Link>
@@ -234,7 +234,7 @@ export function AdminRequestsPage() {
         </div>
         <div className="flex flex-col gap-2 sm:flex-row">
           <div className="relative flex-1">
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
             <Input
               className="pl-9"
               value={searchDraft}
@@ -319,7 +319,7 @@ export function AdminRequestsPage() {
         />
       )}
 
-      <div className="flex items-start gap-2 rounded-xl border border-ink-200 bg-white px-4 py-3 text-xs leading-relaxed text-ink-500">
+      <div className="flex items-start gap-2 rounded-xl border border-ink-200 bg-surface-raised px-4 py-3 text-xs leading-relaxed text-ink-500">
         <AlertTriangle className="mt-0.5 size-4 shrink-0 text-amber-500" aria-hidden="true" />
         Suspicious-pattern detection is a simple heuristic for operator awareness. It is not a
         fraud determination and must not be used as the sole basis for account action.

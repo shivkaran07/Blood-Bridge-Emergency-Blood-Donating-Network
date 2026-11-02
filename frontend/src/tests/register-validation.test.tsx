@@ -23,8 +23,11 @@ const auth: AuthContextValue = {
   error: null,
   refreshMe: vi.fn(async () => undefined),
   signIn: vi.fn(async () => undefined),
+  reauthenticate: vi.fn(async () => 'recent-session-token'),
   signUp: vi.fn(async () => ({ needsConfirmation: false })),
   signOut: vi.fn(async () => undefined),
+  resetPassword: vi.fn(async () => undefined),
+  updatePassword: vi.fn(async () => undefined),
 };
 
 function renderRegister(path = '/register') {
@@ -51,6 +54,7 @@ describe('registration form validation', () => {
     expect(
       screen.getByText('Confirm that you understand how BloodBridge works.'),
     ).toBeInTheDocument();
+    expect(screen.getByLabelText(/full name/i)).toHaveAttribute('aria-invalid', 'true');
   });
 
   it('preselects the donor account type from the landing-page CTA', () => {
@@ -65,5 +69,30 @@ describe('registration form validation', () => {
     expect(screen.getByRole('radio', { name: /requester/i })).toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /administrator/i })).not.toBeInTheDocument();
     expect(screen.queryByRole('radio', { name: /hospital/i })).not.toBeInTheDocument();
+  });
+
+  it('updates the setup guidance when the donor role is selected', async () => {
+    const user = userEvent.setup();
+    renderRegister();
+
+    expect(
+      screen.getByText(/hospital verifier access requires a separate application/i),
+    ).toBeInTheDocument();
+    await user.click(screen.getByRole('radio', { name: /donor/i }));
+
+    expect(
+      screen.getByText(/contact sharing and location are separate optional settings/i),
+    ).toBeInTheDocument();
+  });
+
+  it('shows password-length and matching feedback as the user types', async () => {
+    const user = userEvent.setup();
+    renderRegister();
+
+    await user.type(screen.getByLabelText(/^Password/i), 'bloodbridge123');
+    await user.type(screen.getByLabelText(/^Confirm password/i), 'bloodbridge123');
+
+    expect(screen.getByText('8–72 characters')).toBeInTheDocument();
+    expect(screen.getByText('Passwords match')).toBeInTheDocument();
   });
 });

@@ -12,10 +12,10 @@ export function UnauthorizedPage() {
   return (
     <div className="mx-auto w-full max-w-2xl px-4 py-14 sm:px-6 lg:py-20">
       <Card className="p-6 sm:p-8">
-        <span className="flex size-14 items-center justify-center rounded-2xl bg-brand-50 text-brand-700">
+        <span className="flex size-14 items-center justify-center rounded-xl bg-brand-50 text-brand-accent">
           <LockKeyhole className="size-7" aria-hidden="true" />
         </span>
-        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">
+        <p className="mt-5 text-xs font-semibold uppercase tracking-[0.16em] text-brand-accent">
           Access denied
         </p>
         <h1 className="mt-1.5 text-2xl font-semibold tracking-tight text-ink-900">
@@ -56,7 +56,7 @@ export function UnauthorizedPage() {
           ) : null}
         </div>
 
-        <p className="mt-6 text-xs leading-relaxed text-ink-400">
+        <p className="mt-6 text-xs leading-relaxed text-ink-500">
           If you believe this is a mistake, contact the platform operator. Administrator access is
           provisioned through a documented script, and hospital access is granted only after
           administrator approval of an institutional application.

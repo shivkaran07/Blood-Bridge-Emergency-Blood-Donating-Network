@@ -10,7 +10,7 @@ import {
 } from '../repositories/donorRepository.js';
 import { donorResponseSummary } from '../repositories/responseRepository.js';
 import { unreadNotificationCount } from '../repositories/notificationRepository.js';
-import { listMyRequests } from './requestService.js';
+import { expireStaleRequests, listMyRequests } from './requestService.js';
 import { listOwnResponses } from './responseService.js';
 import { getHospitalDashboard } from './hospitalService.js';
 import { getAdminOverview } from './adminService.js';
@@ -29,6 +29,11 @@ export interface DashboardActivity {
 }
 
 export async function getDashboard(deps: ServiceDeps, ctx: AuthContext) {
+  // Keep dashboard counts aligned with the same expiry rules used by the
+  // request list endpoints. Otherwise a stale VERIFIED request can appear as
+  // both "active" and "verified" until another route happens to sweep it.
+  await expireStaleRequests(deps);
+
   const requesterSummary = await requesterRequestSummary(deps.db, ctx.user.id);
   const recentRequests = await listMyRequests(deps, ctx, { status: null, limit: 5, offset: 0 });
   const activityRows = await recentRequesterActivity(deps.db, ctx.user.id, 8);
@@ -47,7 +52,12 @@ export async function getDashboard(deps: ServiceDeps, ctx: AuthContext) {
   let donorSection = null;
   if (donor) {
     const summary = await donorResponseSummary(deps.db, ctx.user.id);
-    const availableRequests = await countOpenRequestsForDonor(deps.db, donor.blood_group);
+    const availableRequests = await countOpenRequestsForDonor(
+      deps.db,
+      donor.blood_group,
+      donor.is_available,
+      donor.consent_to_contact,
+    );
     const responses = await listOwnResponses(deps, ctx, { limit: 5, offset: 0 });
     donorSection = {
       profile: toDonorProfileDto(donor),

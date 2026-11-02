@@ -103,15 +103,23 @@ async function deploy(): Promise<void> {
 
   const backendEnv = path.resolve(import.meta.dirname, '../../backend/.env.local');
   const frontendEnv = path.resolve(import.meta.dirname, '../../frontend/.env.local');
-  upsertEnvValue(backendEnv, [
+  const backendMainEnv = path.resolve(import.meta.dirname, '../../backend/.env');
+  const frontendMainEnv = path.resolve(import.meta.dirname, '../../frontend/.env');
+
+  const backendEntries: [string, string][] = [
     ['BLOCKCHAIN_CONTRACT_ADDRESS', contractAddress],
     ['BLOCKCHAIN_ENABLED', 'true'],
     ['BLOCKCHAIN_CHAIN_ID', String(record.chainId)],
-  ]);
-  upsertEnvValue(frontendEnv, [
+  ];
+  const frontendEntries: [string, string][] = [
     ['VITE_BLOODBRIDGE_CONTRACT_ADDRESS', contractAddress],
     ['VITE_BLOODBRIDGE_CHAIN_ID', String(record.chainId)],
-  ]);
+  ];
+
+  upsertEnvValue(backendEnv, backendEntries);
+  upsertEnvValue(frontendEnv, frontendEntries);
+  upsertEnvValue(backendMainEnv, backendEntries);
+  upsertEnvValue(frontendMainEnv, frontendEntries);
   console.log(`Config updated -> ${backendEnv}`);
   console.log(`Config updated -> ${frontendEnv}`);
   console.log(

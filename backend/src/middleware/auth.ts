@@ -22,7 +22,10 @@ export function createAuthenticate(db: Db, verifier: AuthVerifier): RequestHandl
       const user = await verifier.verifyToken(token);
       const auth = await buildAuthContext(db, user);
 
-      if (auth.accountStatus === 'SUSPENDED') {
+      // Permit retries when database anonymization succeeded but the Supabase
+      // identity update failed; the delete route still requires explicit confirmation.
+      const isAccountClosureRetry = req.method === 'DELETE' && req.path === '/me';
+      if (auth.accountStatus === 'SUSPENDED' && !isAccountClosureRetry) {
         throw new AppError(
           403,
           'ACCOUNT_SUSPENDED',

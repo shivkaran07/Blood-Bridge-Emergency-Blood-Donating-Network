@@ -86,6 +86,116 @@ describe('full blood request lifecycle', () => {
       .expect(200);
   });
 
+  it('creates a neutral donor profile and preserves saved preferences on availability changes', async () => {
+    const neutralDonor = await createUser(db, {
+      email: 'neutral-donor@example.com',
+      fullName: 'Nina Neutral',
+    });
+
+    const created = await request(app)
+      .put('/api/v1/donor/profile')
+      .set('Authorization', bearer(neutralDonor))
+      .send({
+        bloodGroup: 'AB-',
+        isAvailable: false,
+        consentToContact: false,
+        privacyAccepted: true,
+      })
+      .expect(200);
+
+    // No server default may silently enrol a new donor as available, O+ or
+    // contact-consenting. The values sent by the explicit onboarding form win.
+    expect(created.body.data).toMatchObject({
+      bloodGroup: 'AB-',
+      isAvailable: false,
+      consentToContact: false,
+      latitude: null,
+      longitude: null,
+    });
+
+    const loaded = await request(app)
+      .get('/api/v1/me')
+      .set('Authorization', bearer(neutralDonor))
+      .expect(200);
+    expect(loaded.body.data.donorProfile).toMatchObject({
+      bloodGroup: 'AB-',
+      isAvailable: false,
+      consentToContact: false,
+    });
+
+    const resumed = await request(app)
+      .patch('/api/v1/donor/availability')
+      .set('Authorization', bearer(neutralDonor))
+      .send({ isAvailable: true })
+      .expect(200);
+
+    // Availability is a separate control: changing it must not turn on
+    // contact sharing or invent coordinates.
+    expect(resumed.body.data).toMatchObject({
+      bloodGroup: 'AB-',
+      isAvailable: true,
+      consentToContact: false,
+      latitude: null,
+      longitude: null,
+    });
+  });
+
+  it('requires explicit privacy acceptance before creating a donor profile', async () => {
+    const unconsentedDonor = await createUser(db, {
+      email: 'unconsented-donor@example.com',
+      fullName: 'Uma Unconsented',
+    });
+
+    await request(app)
+      .put('/api/v1/donor/profile')
+      .set('Authorization', bearer(unconsentedDonor))
+      .send({
+        bloodGroup: 'O-',
+        isAvailable: true,
+        consentToContact: true,
+        privacyAccepted: false,
+      })
+      .expect(422);
+  });
+
+  it('stores opted-in approximate location independently of contact-sharing consent', async () => {
+    const privateLocationDonor = await createUser(db, {
+      email: 'private-location-donor@example.com',
+      fullName: 'Luca Location',
+    });
+
+    const saved = await request(app)
+      .put('/api/v1/donor/profile')
+      .set('Authorization', bearer(privateLocationDonor))
+      .send({
+        bloodGroup: 'B+',
+        isAvailable: false,
+        consentToContact: false,
+        privacyAccepted: true,
+        latitude: 18.5,
+        longitude: 73.8,
+      })
+      .expect(200);
+
+    expect(saved.body.data).toMatchObject({
+      bloodGroup: 'B+',
+      isAvailable: false,
+      consentToContact: false,
+      latitude: 18.5,
+      longitude: 73.8,
+    });
+
+    const loaded = await request(app)
+      .get('/api/v1/me')
+      .set('Authorization', bearer(privateLocationDonor))
+      .expect(200);
+    expect(loaded.body.data.donorProfile).toMatchObject({
+      consentToContact: false,
+      latitude: 18.5,
+      longitude: 73.8,
+    });
+  });
+
   afterAll(async () => {
     await db.close();
   });
@@ -319,7 +429,9 @@ describe('full blood request lifecycle', () => {
       .expect(200);
     expect(record.body.data.blockchainAuditKey).toMatch(/^[a-f0-9]{64}$/);
     expect(record.body.data.transactions).toHaveLength(0);
-    expect(record.body.data.note).toContain('No blockchain anchor');
+    // Truthful copy: this deployment is database-backed; nothing was anchored.
+    expect(record.body.data.blockchainVerified).toBe(false);
+    expect(record.body.data.note).toContain('Database verification never creates an anchor');
   });
 
   it('delivers notifications and lets recipients mark them read', async () => {

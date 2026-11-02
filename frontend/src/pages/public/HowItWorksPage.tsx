@@ -20,7 +20,7 @@ import { emergencyNotice, matchingNotice } from '../../lib/constants';
 const requestStates = [
   { label: 'Submitted', tone: 'info' as const, body: 'The requester submitted a request. It is not verified yet.' },
   { label: 'Under review', tone: 'warning' as const, body: 'An approved hospital verifier opened the request for review.' },
-  { label: 'Verified', tone: 'success' as const, body: 'A hospital verifier recorded a database-backed approval.' },
+  { label: 'Verified', tone: 'success' as const, body: 'A hospital verifier recorded an approval in the application.' },
   { label: 'Fulfilled', tone: 'success' as const, body: 'An authorized participant recorded that the need was met.' },
 ];
 
@@ -29,7 +29,7 @@ export function HowItWorksPage() {
     <InfoPage
       eyebrow="How it works"
       title="From an urgent request to a recorded decision"
-      description="BloodBridge coordinates people. It does not test blood or decide clinical compatibility. Every workflow below is database-backed in Part 1, with an honest boundary around what that means."
+      description="BloodBridge coordinates people. It does not test blood or decide clinical compatibility. Every workflow below is recorded in the application database, with an honest boundary around what that means."
     >
       <div className="grid gap-4 sm:grid-cols-2">
         {[
@@ -57,7 +57,7 @@ export function HowItWorksPage() {
           const Icon = step.icon;
           return (
             <Card key={step.title}>
-              <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+              <span className="flex size-10 items-center justify-center rounded-xl bg-brand-50 text-brand-accent">
                 <Icon className="size-5" aria-hidden="true" />
               </span>
               <h2 className="mt-3 text-base font-semibold text-ink-900">{step.title}</h2>
@@ -74,7 +74,7 @@ export function HowItWorksPage() {
         </p>
         <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {requestStates.map((state) => (
-            <div key={state.label} className="rounded-xl border border-ink-200 bg-white p-4">
+            <div key={state.label} className="rounded-xl border border-ink-200 bg-surface-raised p-4">
               <Badge tone={state.tone} dot>
                 {state.label}
               </Badge>
@@ -88,18 +88,20 @@ export function HowItWorksPage() {
         </p>
       </InfoSection>
 
-      <InfoSection title="What hospital verification means in Part 1">
+      <InfoSection title="What hospital verification means">
         <p>
-          Verification is a database record that an approved hospital account reviewed a request.
-          It is not a blockchain transaction, a clinical clearance or proof that blood is available.
+          Verification is an application record that an approved hospital account reviewed a
+          request. It is not a clinical clearance or proof that blood is available. Where an
+          optional audit anchor is configured, the anchor proves only that a wallet transaction
+          happened — never that the medical facts are true.
         </p>
         <InfoList
           items={[
             'The hospital must first apply with institutional details.',
             'Only an administrator can approve the application and grant the HOSPITAL role.',
             'The verifier decision stores the actor, outcome and reason.',
-            'No smart contract is deployed and no transaction hash is fabricated.',
-            'Part 2 will add an optional on-chain anchor for authorized verifier actions.',
+            'No transaction hash is fabricated when no anchor exists.',
+            'The Verification & audit page reports the live mode and every recorded transaction.',
           ]}
         />
       </InfoSection>
@@ -107,8 +109,8 @@ export function HowItWorksPage() {
       <InfoSection title="For donors">
         <InfoList
           items={[
-            'Create a donor profile with a blood group, city, general area and availability.',
-            'Choose whether to consent to contact sharing. You can change availability at any time.',
+            'A new donor profile starts neutral: not available, no contact sharing and no location until you choose each option.',
+            'Availability, contact-sharing consent and optional approximate location are separate, reversible choices.',
             'Browse verified requests that match your exact recorded blood group.',
             'Offer, accept or decline opportunities, and withdraw an eligible offer.',
             'Your phone number and exact coordinates are never shown in public listings.',
@@ -122,7 +124,7 @@ export function HowItWorksPage() {
             'Submit an institutional application from your ordinary account.',
             'An administrator reviews the application and records a decision with a reason.',
             'Approved verifiers receive a pending review queue and review history.',
-            'Approval grants access to database-backed verification only — never administrator access.',
+            'Approval grants access to the review queue only — never administrator access.',
           ]}
         />
       </InfoSection>
@@ -136,7 +138,7 @@ export function HowItWorksPage() {
         </Alert>
       </div>
 
-      <div className="rounded-2xl border border-ink-200 bg-white p-5 sm:p-6">
+      <div className="rounded-xl border border-ink-200 bg-surface-raised p-5 sm:p-6">
         <h2 className="flex items-center gap-2 text-base font-semibold text-ink-900">
           <ShieldCheck className="size-4 text-accent-600" aria-hidden="true" />
           Privacy is part of the workflow

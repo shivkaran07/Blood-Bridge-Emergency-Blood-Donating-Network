@@ -37,6 +37,11 @@ export async function createDonorResponse(
   if (!donor.is_available) {
     throw new ConflictError('You are currently marked unavailable. Update your availability to respond.');
   }
+  if (!donor.consent_to_contact) {
+    throw new ForbiddenError(
+      'Enable contact sharing after an accepted offer before responding to matched requests.',
+    );
+  }
 
   const responseId = await deps.db.transaction(async (tx) => {
     const request = await findRequestForUpdate(tx, requestId);

@@ -26,58 +26,102 @@ export function AuditEventTable({
     );
   }
 
+  const labelFor = (event: AuditEvent) =>
+    auditEventLabels[event.eventType] ?? humanize(event.eventType);
+
   return (
-    <Table minWidth={680}>
-      <THead>
-        <Th>Event</Th>
-        {showActor ? <Th>Actor</Th> : null}
-        {showRequest ? <Th>Request</Th> : null}
-        <Th>When</Th>
-      </THead>
-      <TBody>
+    <>
+      <ul className="divide-y divide-ink-100 md:hidden">
         {items.map((event) => (
-          <Tr key={event.id}>
-            <Td>
-              <div className="flex items-center gap-2">
-                <span className="font-medium text-ink-900">
-                  {auditEventLabels[event.eventType] ?? humanize(event.eventType)}
-                </span>
-                <Badge tone="outline">{event.eventType}</Badge>
-              </div>
-              {Object.keys(event.metadata ?? {}).length > 0 ? (
-                <p className="mt-0.5 max-w-md truncate text-xs text-ink-400">
-                  {Object.entries(event.metadata)
-                    .slice(0, 3)
-                    .map(([key, value]) => `${humanize(key)}: ${String(value)}`)
-                    .join(' · ')}
-                </p>
-              ) : null}
-            </Td>
-            {showActor ? (
-              <Td className="whitespace-nowrap">
-                {event.actorName ?? <span className="text-ink-400">System</span>}
-              </Td>
+          <li key={event.id} className="py-3.5 first:pt-0 last:pb-0">
+            <div className="flex items-start justify-between gap-3">
+              <p className="min-w-0 text-sm font-medium text-ink-900">{labelFor(event)}</p>
+              <time className="shrink-0 text-[0.6875rem] text-ink-500">
+                {formatDateTime(event.createdAt)}
+              </time>
+            </div>
+            {Object.keys(event.metadata ?? {}).length > 0 ? (
+              <p className="mt-1 line-clamp-2 text-xs leading-relaxed text-ink-500">
+                {Object.entries(event.metadata)
+                  .slice(0, 3)
+                  .map(([key, value]) => `${humanize(key)}: ${String(value)}`)
+                  .join(' · ')}
+              </p>
             ) : null}
-            {showRequest ? (
-              <Td>
-                {event.requestId ? (
+            <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 text-[0.6875rem] text-ink-500">
+              {showActor ? <span>{event.actorName ?? 'System'}</span> : null}
+              {showRequest ? (
+                event.requestId ? (
                   <Link
                     to={`/app/requests/${event.requestId}`}
-                    className="inline-flex items-center gap-1 font-medium text-brand-700 hover:text-brand-800"
+                    className="inline-flex items-center gap-1 font-medium text-brand-accent hover:text-brand-accent-strong"
                   >
                     {event.requestHospitalName ?? 'View request'}
                     <ArrowUpRight className="size-3.5" aria-hidden="true" />
                   </Link>
                 ) : (
-                  <span className="text-ink-400">Account-level</span>
-                )}
-              </Td>
-            ) : null}
-            <Td className="whitespace-nowrap text-xs text-ink-500">{formatDateTime(event.createdAt)}</Td>
-          </Tr>
+                  <span>Account-level</span>
+                )
+              ) : null}
+            </div>
+          </li>
         ))}
-      </TBody>
-    </Table>
+      </ul>
+
+      <div className="hidden md:block">
+        <Table minWidth={680}>
+          <THead>
+            <Th>Event</Th>
+            {showActor ? <Th>Actor</Th> : null}
+            {showRequest ? <Th>Request</Th> : null}
+            <Th>When</Th>
+          </THead>
+          <TBody>
+            {items.map((event) => (
+              <Tr key={event.id}>
+                <Td>
+                  <div className="flex items-center gap-2">
+                    <span className="font-medium text-ink-900">{labelFor(event)}</span>
+                    <Badge tone="outline">{event.eventType}</Badge>
+                  </div>
+                  {Object.keys(event.metadata ?? {}).length > 0 ? (
+                    <p className="mt-0.5 max-w-md truncate text-xs text-ink-500">
+                      {Object.entries(event.metadata)
+                        .slice(0, 3)
+                        .map(([key, value]) => `${humanize(key)}: ${String(value)}`)
+                        .join(' · ')}
+                    </p>
+                  ) : null}
+                </Td>
+                {showActor ? (
+                  <Td className="whitespace-nowrap">
+                    {event.actorName ?? <span className="text-ink-500">System</span>}
+                  </Td>
+                ) : null}
+                {showRequest ? (
+                  <Td>
+                    {event.requestId ? (
+                      <Link
+                        to={`/app/requests/${event.requestId}`}
+                        className="inline-flex items-center gap-1 font-medium text-brand-accent hover:text-brand-accent-strong"
+                      >
+                        {event.requestHospitalName ?? 'View request'}
+                        <ArrowUpRight className="size-3.5" aria-hidden="true" />
+                      </Link>
+                    ) : (
+                      <span className="text-ink-500">Account-level</span>
+                    )}
+                  </Td>
+                ) : null}
+                <Td className="whitespace-nowrap text-xs text-ink-500">
+                  {formatDateTime(event.createdAt)}
+                </Td>
+              </Tr>
+            ))}
+          </TBody>
+        </Table>
+      </div>
+    </>
   );
 }
 
@@ -101,7 +145,7 @@ export function AuditFeed({ items }: { items: AuditEvent[] }) {
                   {' · '}
                   <Link
                     to={`/app/requests/${event.requestId}`}
-                    className="text-brand-700 hover:text-brand-800"
+                    className="text-brand-accent hover:text-brand-accent-strong"
                   >
                     {event.requestHospitalName ?? 'request'}
                   </Link>
@@ -109,7 +153,7 @@ export function AuditFeed({ items }: { items: AuditEvent[] }) {
               ) : null}
             </p>
           </div>
-          <time className="shrink-0 text-xs text-ink-400">{formatDateTime(event.createdAt)}</time>
+          <time className="shrink-0 text-xs text-ink-500">{formatDateTime(event.createdAt)}</time>
         </li>
       ))}
     </ul>

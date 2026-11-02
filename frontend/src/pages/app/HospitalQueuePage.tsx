@@ -68,7 +68,7 @@ export function HospitalQueuePage() {
                     >
                       Review request
                     </Link>
-                    <span className="text-xs text-ink-400">
+                    <span className="text-xs text-ink-500">
                       Submitted {new Intl.DateTimeFormat(undefined, { dateStyle: 'medium', timeStyle: 'short' }).format(new Date(request.createdAt))}
                     </span>
                   </div>

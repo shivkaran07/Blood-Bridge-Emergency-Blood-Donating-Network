@@ -7,7 +7,7 @@ import { ArrowRight, CheckCircle2, LockKeyhole, Mail, ShieldCheck } from 'lucide
 import { useAuth } from '../../context/AuthContext';
 import { Button } from '../../components/ui/Button';
 import { Card } from '../../components/ui/Card';
-import { Field, FormError, Input } from '../../components/ui/Field';
+import { Field, FormError, Input, PasswordInput } from '../../components/ui/Field';
 import { Alert } from '../../components/ui/Alert';
 import { supabaseConfigured } from '../../lib/env';
 import { errorMessage } from '../../lib/api';
@@ -57,8 +57,8 @@ export function LoginPage() {
   return (
     <div className="mx-auto grid w-full max-w-5xl gap-8 px-4 py-10 sm:px-6 lg:grid-cols-[1fr_0.9fr] lg:py-14">
       <Card className="p-6 sm:p-8">
-        <p className="text-xs font-semibold uppercase tracking-[0.16em] text-brand-700">Welcome back</p>
-        <h1 className="mt-2 text-2xl font-semibold tracking-tight text-ink-900">Sign in to BloodBridge</h1>
+        <p className="type-eyebrow">Welcome back</p>
+        <h1 className="type-title mt-2 text-[1.75rem] text-ink-900">Sign in to BloodBridge</h1>
         <p className="mt-2 text-sm leading-relaxed text-ink-500">
           Continue to your role-aware workspace. Hospital verifiers and administrators use
           the same sign-in.
@@ -66,10 +66,10 @@ export function LoginPage() {
 
         {!supabaseConfigured ? (
           <Alert variant="warning" className="mt-5" title="Supabase is not configured">
-            Add <code className="rounded bg-white/70 px-1">VITE_SUPABASE_URL</code> and{' '}
-            <code className="rounded bg-white/70 px-1">VITE_SUPABASE_ANON_KEY</code> to{' '}
-            <code className="rounded bg-white/70 px-1">frontend/.env</code>, then restart the dev
-            server. See <code className="rounded bg-white/70 px-1">docs/setup.md</code>.
+            Add <code className="rounded bg-ink-100 px-1">VITE_SUPABASE_URL</code> and{' '}
+            <code className="rounded bg-ink-100 px-1">VITE_SUPABASE_ANON_KEY</code> to{' '}
+            <code className="rounded bg-ink-100 px-1">frontend/.env</code>, then restart the dev
+            server. See <code className="rounded bg-ink-100 px-1">docs/setup.md</code>.
           </Alert>
         ) : null}
 
@@ -78,7 +78,7 @@ export function LoginPage() {
 
           <Field label="Email address" htmlFor="email" required error={errors.email?.message}>
             <div className="relative">
-              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+              <Mail className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
               <Input
                 id="email"
                 type="email"
@@ -91,12 +91,24 @@ export function LoginPage() {
             </div>
           </Field>
 
-          <Field label="Password" htmlFor="password" required error={errors.password?.message}>
+          <Field
+            label="Password"
+            htmlFor="password"
+            required
+            hint={
+              <Link
+                to="/forgot-password"
+                className="inline-flex min-h-11 items-center text-xs font-medium text-brand-accent hover:text-brand-accent-strong"
+              >
+                Forgot password?
+              </Link>
+            }
+            error={errors.password?.message}
+          >
             <div className="relative">
-              <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
-              <Input
+              <LockKeyhole className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
+              <PasswordInput
                 id="password"
-                type="password"
                 autoComplete="current-password"
                 placeholder="Your password"
                 className="pl-9"
@@ -120,28 +132,29 @@ export function LoginPage() {
 
         <p className="mt-6 text-center text-sm text-ink-500">
           New to BloodBridge?{' '}
-          <Link to="/register" className="font-semibold text-brand-700 hover:text-brand-800">
+          <Link to="/register" className="inline-flex min-h-11 items-center font-semibold text-brand-accent hover:text-brand-accent-strong">
             Create an account
           </Link>
         </p>
       </Card>
 
-      <aside className="flex flex-col justify-between gap-6 rounded-2xl border border-ink-200 bg-ink-950 p-6 text-white sm:p-8">
-        <div>
-          <span className="inline-flex size-11 items-center justify-center rounded-xl bg-white/10 text-brand-200">
+      <aside className="brand-surface relative isolate flex flex-col justify-between gap-6 overflow-hidden rounded-2xl border border-brand-900/40 p-6 text-white shadow-hero sm:p-8">
+        <div className="blueprint-grid pointer-events-none absolute inset-0 opacity-60" aria-hidden="true" />
+        <div className="relative">
+          <span className="inline-flex size-11 items-center justify-center rounded-xl border border-white/15 bg-white/10 text-brand-200">
             <ShieldCheck className="size-5" aria-hidden="true" />
           </span>
-          <h2 className="mt-5 text-xl font-semibold leading-snug">
+          <h2 className="type-title mt-5 text-xl leading-snug text-white">
             Verified requests. Consent-based contact. Recorded decisions.
           </h2>
-          <p className="mt-3 text-sm leading-relaxed text-ink-300">
+          <p className="mt-3 text-sm leading-relaxed text-white/70">
             BloodBridge keeps coordination transparent while protecting personal contact
-            details. Hospital verification in Part 1 is database-backed, not blockchain
-            verification.
+            details. Hospital review decisions live in the application database; an optional
+            on-chain anchor records that a decision happened without exposing personal data.
           </p>
         </div>
 
-        <ul className="space-y-3 text-sm text-ink-200">
+        <ul className="relative space-y-3 text-sm text-white/80">
           {[
             'Request status changes follow a central, enforced workflow.',
             'Donor phone numbers are revealed only with consent and acceptance.',
@@ -149,13 +162,13 @@ export function LoginPage() {
             'Suspended accounts are blocked server-side.',
           ].map((item) => (
             <li key={item} className="flex items-start gap-2.5">
-              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-accent-300" aria-hidden="true" />
+              <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-emerald-300" aria-hidden="true" />
               <span className="leading-relaxed">{item}</span>
             </li>
           ))}
         </ul>
 
-        <p className="rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs leading-relaxed text-ink-300">
+        <p className="relative rounded-lg border border-white/10 bg-white/5 px-3 py-2 text-xs leading-relaxed text-white/65">
           For a life-threatening emergency, contact your local emergency number and the
           hospital directly. This application is not an emergency dispatch service.
         </p>

@@ -102,7 +102,7 @@ export function AdminUsersPage() {
         }}
       >
         <div className="relative flex-1">
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-400" aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-ink-500" aria-hidden="true" />
           <Input
             className="pl-9"
             value={searchDraft}
@@ -133,7 +133,7 @@ export function AdminUsersPage() {
         <ErrorState message={errorMessage(users.error)} onRetry={() => void users.refetch()} />
       ) : users.data && users.data.items.length > 0 ? (
         <>
-          <div className="rounded-2xl border border-ink-200/80 bg-white p-4 shadow-card sm:p-5">
+          <div className="hidden rounded-xl border border-ink-200/90 bg-surface-raised p-4 shadow-card sm:p-5 xl:block">
             <Table minWidth={860}>
               <THead>
                 <Th>User</Th>
@@ -157,10 +157,10 @@ export function AdminUsersPage() {
                           <div className="min-w-0">
                             <p className="truncate font-medium text-ink-900">
                               {user.fullName}
-                              {isSelf ? <span className="ml-1 text-xs text-ink-400">(you)</span> : null}
+                              {isSelf ? <span className="ml-1 text-xs text-ink-500">(you)</span> : null}
                             </p>
                             <p className="truncate text-xs text-ink-500">{user.email}</p>
-                            {user.city ? <p className="text-xs text-ink-400">{user.city}</p> : null}
+                            {user.city ? <p className="text-xs text-ink-500">{user.city}</p> : null}
                           </div>
                         </div>
                       </Td>
@@ -188,7 +188,7 @@ export function AdminUsersPage() {
                             </Badge>
                           </div>
                         ) : (
-                          <span className="text-xs text-ink-400">—</span>
+                          <span className="text-xs text-ink-500">—</span>
                         )}
                       </Td>
                       <Td>
@@ -199,7 +199,7 @@ export function AdminUsersPage() {
                       <Td className="whitespace-nowrap text-xs">{formatDate(user.createdAt)}</Td>
                       <Td>
                         {isAdmin ? (
-                          <span className="inline-flex items-center gap-1 text-xs text-ink-400">
+                          <span className="inline-flex items-center gap-1 text-xs text-ink-500">
                             <ShieldAlert className="size-3.5" aria-hidden="true" />
                             Protected
                           </span>
@@ -227,6 +227,82 @@ export function AdminUsersPage() {
               </TBody>
             </Table>
           </div>
+          <ul className="space-y-3 xl:hidden">
+            {users.data.items.map((user) => {
+              const isSelf = user.id === me?.user.id;
+              const isAdmin = user.roles.includes('ADMIN');
+              return (
+                <li
+                  key={user.id}
+                  className="rounded-xl border border-ink-200/90 bg-surface-raised p-4 shadow-card"
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex min-w-0 items-start gap-3">
+                      <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-ink-100 text-ink-500">
+                        <UserRound className="size-4" aria-hidden="true" />
+                      </span>
+                      <div className="min-w-0">
+                        <p className="truncate text-sm font-semibold text-ink-900">
+                          {user.fullName}
+                          {isSelf ? <span className="ml-1 text-xs font-normal text-ink-500">(you)</span> : null}
+                        </p>
+                        <p className="truncate text-[0.75rem] text-ink-500">{user.email}</p>
+                        {user.city ? <p className="text-[0.75rem] text-ink-500">{user.city}</p> : null}
+                      </div>
+                    </div>
+                    <Badge tone={user.accountStatus === 'ACTIVE' ? 'success' : 'danger'} dot>
+                      {user.accountStatus}
+                    </Badge>
+                  </div>
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    {user.roles.map((role) => (
+                      <RoleBadge key={role} role={role} />
+                    ))}
+                    {user.hospitalName ? (
+                      <Badge
+                        tone={
+                          user.hospitalStatus === 'APPROVED'
+                            ? 'success'
+                            : user.hospitalStatus === 'PENDING'
+                              ? 'warning'
+                              : 'danger'
+                        }
+                      >
+                        {user.hospitalName}
+                      </Badge>
+                    ) : null}
+                  </div>
+                  <div className="mt-3 flex flex-wrap items-center justify-between gap-2 border-t border-ink-100 pt-3">
+                    <span className="text-[0.6875rem] text-ink-500">
+                      Joined {formatDate(user.createdAt)}
+                    </span>
+                    {isAdmin ? (
+                      <span className="inline-flex items-center gap-1 text-[0.6875rem] text-ink-500">
+                        <ShieldAlert className="size-3.5" aria-hidden="true" />
+                        Protected account
+                      </span>
+                    ) : (
+                      <Button
+                        variant={user.accountStatus === 'ACTIVE' ? 'danger' : 'secondary'}
+                        size="sm"
+                        disabled={isSelf}
+                        onClick={() => openStatusDialog(user)}
+                        leftIcon={
+                          user.accountStatus === 'ACTIVE' ? (
+                            <Ban className="size-3.5" aria-hidden="true" />
+                          ) : (
+                            <CheckCircle2 className="size-3.5" aria-hidden="true" />
+                          )
+                        }
+                      >
+                        {user.accountStatus === 'ACTIVE' ? 'Suspend' : 'Reactivate'}
+                      </Button>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
           <Pagination
             total={users.data.total}
             limit={PAGE_SIZE}

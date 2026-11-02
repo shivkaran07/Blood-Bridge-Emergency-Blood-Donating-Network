@@ -17,9 +17,9 @@ const faqs: Array<{ question: string; answer: string }> = [
       'No. Verification records that an approved hospital account reviewed the request in this application. It does not prove stock levels, clinical compatibility or donor eligibility.',
   },
   {
-    question: 'Is verification blockchain-based in Part 1?',
+    question: 'Does verification use the blockchain?',
     answer:
-      'No. Part 1 verification is database-backed. The application stores an opaque audit reference and synchronization state for each request, and the transaction table is prepared, but no smart contract is deployed and no transaction is created. Part 2 will add the real on-chain layer.',
+      'Not necessarily. Hospital review decisions are always recorded in the application database. Some deployments also enable an optional on-chain audit layer, where an authorized verifier wallet signs a transaction that anchors an opaque audit key. The Verification & audit page shows which mode is actually active. An on-chain anchor never proves medical facts, stock levels or compatibility.',
   },
   {
     question: 'How does donor matching work?',
@@ -59,7 +59,7 @@ const faqs: Array<{ question: string; answer: string }> = [
   {
     question: 'Are email or SMS notifications sent?',
     answer:
-      'Part 1 provides in-app notifications stored in the database. No external email, SMS or push provider is configured, and the application does not claim that an external message was delivered.',
+      'In-app notifications are stored in the database. No external email, SMS or push provider is configured, and the application does not claim that an external message was delivered.',
   },
   {
     question: 'What data is collected?',
@@ -73,15 +73,15 @@ export function FaqPage() {
     <InfoPage
       eyebrow="FAQ"
       title="Frequently asked questions"
-      description="Straight answers about what BloodBridge does, what it deliberately does not do, and what belongs to Part 2 of the project."
+      description="Straight answers about what BloodBridge does, what it deliberately does not do, and how the verification mode is reported."
     >
-      <div className="divide-y divide-ink-200 overflow-hidden rounded-2xl border border-ink-200 bg-white">
+      <div className="divide-y divide-ink-200 overflow-hidden rounded-xl border border-ink-200 bg-surface-raised">
         {faqs.map((faq) => (
           <details key={faq.question} className="group px-5 py-4 open:bg-ink-50/40">
             <summary className="flex cursor-pointer list-none items-center justify-between gap-4 text-sm font-semibold text-ink-900 marker:hidden">
               <span>{faq.question}</span>
               <ChevronDown
-                className="size-4 shrink-0 text-ink-400 transition group-open:rotate-180"
+                className="size-4 shrink-0 text-ink-500 transition group-open:rotate-180"
                 aria-hidden="true"
               />
             </summary>
@@ -99,9 +99,9 @@ export function FaqPage() {
         </Alert>
       </div>
 
-      <div className="flex flex-col items-start gap-4 rounded-2xl border border-ink-200 bg-white p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
+      <div className="flex flex-col items-start gap-4 rounded-xl border border-ink-200 bg-surface-raised p-5 sm:flex-row sm:items-center sm:justify-between sm:p-6">
         <div className="flex items-start gap-3">
-          <MessageCircleQuestion className="mt-0.5 size-5 shrink-0 text-brand-700" aria-hidden="true" />
+          <MessageCircleQuestion className="mt-0.5 size-5 shrink-0 text-brand-accent" aria-hidden="true" />
           <div>
             <h2 className="text-sm font-semibold text-ink-900">Still have a question?</h2>
             <p className="mt-1 text-sm leading-relaxed text-ink-500">

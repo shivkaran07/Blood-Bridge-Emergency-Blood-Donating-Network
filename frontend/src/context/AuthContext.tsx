@@ -35,8 +35,11 @@ export interface AuthContextValue {
   error: string | null;
   refreshMe: () => Promise<void>;
   signIn: (email: string, password: string) => Promise<void>;
+  reauthenticate: (password: string) => Promise<string>;
   signUp: (input: SignUpInput) => Promise<{ needsConfirmation: boolean }>;
   signOut: () => Promise<void>;
+  resetPassword: (email: string) => Promise<void>;
+  updatePassword: (password: string) => Promise<void>;
 }
 
 export const AuthContext = createContext<AuthContextValue | null>(null);
@@ -164,6 +167,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (authError) throw new Error(friendlyAuthError(authError.message));
   }, []);
 
+  const reauthenticate = useCallback(async (password: string) => {
+    if (!supabase || !session?.user.email) {
+      throw new Error('Reauthentication is unavailable for this session.');
+    }
+    const { data, error: authError } = await supabase.auth.signInWithPassword({
+      email: session.user.email,
+      password,
+    });
+    if (authError) throw new Error(friendlyAuthError(authError.message));
+    if (!data.session) throw new Error('Reauthentication did not create an active session.');
+    return data.session.access_token;
+  }, [session?.user.email]);
+
   const signUp = useCallback(async (input: SignUpInput) => {
     if (!supabase) {
       throw new Error('Supabase is not configured. Add the VITE_SUPABASE_* values to frontend/.env.');
@@ -193,6 +209,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setStatus(supabase ? 'unauthenticated' : 'unconfigured');
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    if (!supabase) {
+      throw new Error('Supabase is not configured. Add the VITE_SUPABASE_* values to frontend/.env.');
+    }
+    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/reset-password`,
+    });
+    if (resetError) throw new Error(friendlyAuthError(resetError.message));
+  }, []);
+
+  const updatePassword = useCallback(async (password: string) => {
+    if (!supabase) {
+      throw new Error('Supabase is not configured. Add the VITE_SUPABASE_* values to frontend/.env.');
+    }
+    const { error: updateError } = await supabase.auth.updateUser({ password });
+    if (updateError) throw new Error(friendlyAuthError(updateError.message));
+  }, []);
+
   const value = useMemo<AuthContextValue>(
     () => ({
       status,
@@ -202,10 +236,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       error,
       refreshMe,
       signIn,
+      reauthenticate,
       signUp,
       signOut,
+      resetPassword,
+      updatePassword,
     }),
-    [status, session, token, me, error, refreshMe, signIn, signUp, signOut],
+    [status, session, token, me, error, refreshMe, signIn, reauthenticate, signUp, signOut, resetPassword, updatePassword],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

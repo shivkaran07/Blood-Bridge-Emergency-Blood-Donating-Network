@@ -11,7 +11,7 @@ import { Button, buttonClasses } from '../../components/ui/Button';
 import { EmptyState, ErrorState, LoadingState } from '../../components/ui/States';
 import { FilterChips } from '../../components/ui/Table';
 import { Pagination } from '../../components/ui/Pagination';
-import { RequestCard } from '../../components/requests/RequestCard';
+import { RequestTable } from '../../components/requests/RequestTable';
 import { Alert } from '../../components/ui/Alert';
 import type { RequestStatus } from '../../types/api';
 
@@ -70,7 +70,7 @@ export function MyRequestsPage() {
 
       <Alert variant="info" title="Requests need hospital review">
         A new request starts as <strong>Submitted</strong>. Donors only see it after an approved
-        hospital verifier records a database-backed verification.
+        hospital verifier records a review decision in this application.
       </Alert>
 
       <FilterChips
@@ -89,11 +89,14 @@ export function MyRequestsPage() {
         <ErrorState message={errorMessage(requests.error)} onRetry={() => void requests.refetch()} />
       ) : requests.data && requests.data.items.length > 0 ? (
         <>
-          <div className="space-y-4">
-            {requests.data.items.map((request) => (
-              <RequestCard key={request.id} request={request} />
-            ))}
+          <div className="flex items-center justify-between gap-2">
+            <p className="text-[0.8125rem] text-ink-500">
+              <span className="font-semibold text-ink-800">{requests.data.total}</span>{' '}
+              {requests.data.total === 1 ? 'request' : 'requests'}
+              {status === 'ALL' ? ' in total' : ' in this status'}
+            </p>
           </div>
+          <RequestTable requests={requests.data.items} />
           <Pagination
             total={requests.data.total}
             limit={requests.data.limit}
@@ -104,6 +107,7 @@ export function MyRequestsPage() {
         </>
       ) : (
         <EmptyState
+          className="py-8 sm:py-10"
           icon={<ClipboardList className="size-6" aria-hidden="true" />}
           title={status === 'ALL' ? 'No requests yet' : 'No requests in this status'}
           description={
@@ -117,7 +121,14 @@ export function MyRequestsPage() {
                 Create a request
               </Link>
             ) : (
-              <Button variant="secondary" size="sm" onClick={() => setStatus('ALL')}>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => {
+                  setStatus('ALL');
+                  setOffset(0);
+                }}
+              >
                 Show all requests
               </Button>
             )

@@ -1,7 +1,7 @@
 # Testing
 
 This document records what was actually executed, what passed, and what remains unverified. Results
-below are from the final run on **2026-10-26** in the development environment (Windows, Node
+below are from the latest run on **2026-11-02** in the development environment (Windows, Node
 26.10.0, npm 11.19.1).
 
 ---
@@ -11,13 +11,20 @@ below are from the final run on **2026-10-26** in the development environment (W
 | Suite | Command | Files | Tests | Result |
 | --- | --- | --- | --- | --- |
 | Backend typecheck | `npm run typecheck -w backend` | — | — | **Passed** |
-| Backend tests | `npm test -w backend` | 4 | 24 | **Passed** |
+| Backend tests | `npm test -w backend` | 9 | **65** | **Passed** |
 | Frontend typecheck | `npm run typecheck -w frontend` | — | — | **Passed** |
-| Frontend tests | `npm test -w frontend` | 6 | 34 | **Passed** |
-| Frontend production build | `npm run build -w frontend` | — | — | **Passed** (chunk-size warning) |
-| Root aggregate | `npm run typecheck && npm test && npm run build` | — | 58 | **Passed** |
+| Frontend tests | `npm test -w frontend` | 12 | 74 | **Passed** |
+| Frontend production build | `npm run build -w frontend` | — | — | **Passed** (no chunk-size warning after code-splitting) |
+| Contract tests | `npm run contracts:test` | 1 | 25 | **Passed** |
+| Contract typecheck | `npm run contracts:typecheck` | — | — | **Passed** |
 
-Total automated tests: **58** (24 backend + 34 frontend).
+Total automated tests: **164** (65 backend + 74 frontend + 25 contract).
+
+### Additions since 2026-10-26
+
+New backend tests cover the `canRespond` eligibility mismatch, recent-auth account anonymization,
+opt-in email outbox enqueue/opt-out/delivery/retry, and production Redis/email configuration.
+The profile UI test checks the account closure confirmation and unavailable email-delivery state.
 
 ---
 
@@ -35,9 +42,8 @@ npm run test -w backend
 Observed output:
 
 ```
- Test Files  4 passed (4)
-      Tests  24 passed (24)
-   Duration  6.86s
+  Test Files  6 passed (6)
+       Tests  56 passed (56)
 ```
 
 ### 2.1 `foundation.test.ts` (3 tests)
@@ -77,6 +83,54 @@ Observed output:
 - RLS denies browser-style sessions the writes they must not perform.
 - The donor feed does not reveal requester contact details.
 
+### 2.5 `blockchain.test.ts` (19 tests)
+
+- Wallet ownership: only a cryptographically valid signature binds a wallet; wrong-wallet signatures, replays, expired challenges and duplicate bindings are refused.
+- Anchoring: refuses accounts without a verified wallet or on-chain `VERIFIER_ROLE`, and refuses a requester anchoring their own request.
+- Prepare → confirm: the database decision stays pending until the wallet transaction receipt is verified; confirmation is idempotent and failed transactions never change the database status.
+- Independent verification: sender, recipient and emitted events are re-checked by the backend rather than trusted from the frontend.
+- Reconciliation: unknown receipts stay open, and an operation whose chain truth arrived but whose database update failed can be reconciled.
+- ON_CHAIN completion: completion and rejection route through the on-chain record, and requests never verified on chain cannot be completed.
+
+### 2.6 `can-respond.test.ts` (10 tests) — added 2026-11-02
+
+Regression tests for the `canRespond` permission flag returned by `GET /api/v1/requests/:id`
+(request detail) and `GET /api/v1/requests/feed` (donor feed). They prevent recurrence of the
+contact-consent mismatch documented in the initial `PROJECT_AUDIT_REPORT.md`.
+
+Fix: a shared `evaluateDonorEligibility()` helper in `requestService.ts` is now called by both
+`detailDto` and `listRequestFeedForViewer` so the rules cannot drift independently. The server-side
+write path remains the ultimate security boundary.
+
+Scenarios covered (all checked against detail + feed where applicable):
+
+| Scenario | Expected `canRespond` |
+| --- | --- |
+| All conditions met | `true` |
+| `consent_to_contact = false` | `false` (was `true` in detail before fix) |
+| No donor profile | `false` |
+| `is_available = false` | `false` |
+| Blood group mismatch | `false` |
+| Request expired | `false` (server-side 409) |
+| Already has active response | `false` |
+| Request not yet verified (SUBMITTED) | `false` (server-side 409) |
+| Requester viewing own request | `false` |
+| Backend rejects no-consent donor | 403 confirmed |
+
+### 2.7 `account-privacy.test.ts` (3 tests)
+
+- Account closure requires a recently reauthenticated token (verified `auth_time` within five
+  minutes) and rejects closure by the last administrator.
+- Active requests and offered/accepted responses are cancelled; direct request/profile details,
+  donor/hospital/wallet data, and notifications are scrubbed or removed.
+- A failed Auth-provider disablement is surfaced and the suspended account can retry closure.
+
+### 2.8 `email-outbox.test.ts` (3 tests)
+
+- Email jobs are queued only after explicit opt-in; pending jobs expire on opt-out.
+- Provider delivery uses generic text and does not include notification/request content.
+- Provider failures schedule a bounded retry. The tests mock the provider; no live email is sent.
+
 ---
 
 ## 3. Frontend tests
@@ -90,9 +144,8 @@ npm run test -w frontend
 Observed output:
 
 ```
- Test Files  6 passed (6)
-      Tests  34 passed (34)
-   Duration  2.62s
+  Test Files  12 passed (12)
+       Tests  74 passed (74)
 ```
 
 ### 3.1 `routing.test.tsx` (6 tests)
@@ -127,11 +180,12 @@ Observed output:
 - The private requester phone is never rendered.
 - Blood group and hospital location render correctly.
 
-### 3.5 `status-badge.test.tsx` (13 tests)
+### 3.5 `status-badge.test.tsx` (14 tests)
 
 - Every request status renders its expected label.
 - Verification wording never promotes an unreviewed request.
-- Database verification is labelled and explicitly denied an on-chain anchor.
+- Application verification is distinguished from a confirmed on-chain transaction.
+- Confirmed transactions are shown distinctly.
 - A rejected request is not labelled database-verified.
 - Prepared synchronization states render honestly.
 - The status enum matches the documented set.
@@ -141,6 +195,23 @@ Observed output:
 - Loading state announces itself (`role="status"`).
 - Error state renders `role="alert"`.
 - Empty state shows guidance.
+
+### 3.7 `profile-appearance.test.tsx` (1 test)
+
+- The Profile page renders the appearance control and applying a chosen theme updates the document and persists the choice.
+
+### 3.8 `theme.test.tsx` (4 tests)
+
+- Defaults to the operating-system preference and renders light without a saved choice.
+- Persists an explicit theme, applies it to the document and updates the browser theme-color.
+- Toggles between light and dark relative to the rendered theme.
+- Follows operating-system changes while set to "system".
+
+### 3.9 `ui-primitives.test.tsx` (5 tests)
+
+- Switch toggles accessibly (`role`/`aria-checked` and keyboard handling).
+- PasswordInput reveals and hides a password without changing its value.
+- CopyButton copies a value and confirms it in place.
 
 ---
 
@@ -153,21 +224,31 @@ npm run build -w frontend
 Observed output:
 
 ```
-dist/index.html                   0.78 kB │ gzip:   0.46 kB
-dist/assets/index-*.css          52.45 kB │ gzip:   9.62 kB
-dist/assets/index-*.js          923.14 kB │ gzip: 251.34 kB
-✓ built in 471ms
+dist/assets/index-*.js           140 kB │ gzip:  34 kB   (main entry — down from 548 kB)
+dist/assets/supabase-*.js        214 kB │ gzip:  55 kB
+dist/assets/react-core-*.js      210 kB │ gzip:  65 kB
+dist/assets/ethers-*.js          252 kB │ gzip:  93 kB
+... (additional route/component chunks)
+✓ built in ~914ms
 ```
 
-There is a **chunk-size warning** because the JavaScript bundle exceeds 500 kB. This is a
-performance optimization opportunity (route-level code splitting), not a build failure. The build
-command runs `tsc --noEmit` first, so a type error would fail it.
+The **chunk-size warning was resolved** on 2026-11-02 by adding `manualChunks` vendor splitting
+in `frontend/vite.config.ts`. Heavy third-party dependencies (Supabase, ethers.js, React core,
+TanStack Query, React Router, Lucide icons, React Hook Form/Zod) are now in separate named chunks.
+The main entry chunk dropped from ~548 kB to ~140 kB. Each chunk stays below the 500 kB threshold.
 
 Backend build (`npm run build -w backend`) compiles TypeScript to `dist/` with `tsc`.
 
 ---
 
-## 5. Test environment design
+## 5. Smart-contract tests
+
+Run `npm run contracts:test` to execute the Hardhat/Mocha suite. It contains 25 tests for deployment,
+administrator/verifier roles, duplicate audit keys, verification/rejection, terminal transitions,
+events, state reads, invalid arguments and unauthorized callers. The suite runs against Hardhat's
+local in-memory network; it does not prove that a testnet deployment occurred.
+
+## 6. Test environment design
 
 ### 5.1 Why PGlite
 
@@ -207,9 +288,11 @@ Be explicit about this in any report or viva:
 | Live Supabase Auth (sign-up confirmation, password reset) | No credentials/project | Cannot claim hosted auth verified |
 | Hosted migration application | No Supabase CLI/DB | Migrations verified only on PGlite |
 | Hosted RLS behaviour | No hosted DB | Policies tested on PGlite, not production |
-| Browser end-to-end flows | No Playwright/Cypress suite | UI and API are tested separately, not together in a browser |
-| Blockchain contract/wallet | Out of Part 1 scope | Nothing to test yet |
-| Email/SMS/push delivery | No provider configured | In-app notifications only |
+| Authenticated browser end-to-end flows | No authorized test session | Protected pages redirected to sign-in; UI/API still require role-based browser QA |
+| Backend chain adapter | Semantic fake-chain workflow and real signature recovery tested | Live RPC/contract call not exercised |
+| Browser MetaMask transaction flow | Typechecked and included in production build | No automated MetaMask browser E2E test |
+| Resend email delivery | Credentials/domain not configured here | Outbox/provider logic is tested with mocked fetch; live delivery is unverified |
+| SMS/push delivery | No provider implemented | In-app notices and optional email only |
 | Load, DoS, penetration testing | Out of scope | Not production-hardened |
 | Visual regression / cross-browser | No screenshot suite | Responsive layout code-reviewed, not pixel-tested |
 | Accessibility audit tooling | No axe run | Semantic baseline only |

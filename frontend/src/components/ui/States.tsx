@@ -4,7 +4,7 @@ import { Button } from './Button';
 import { cn } from '../../lib/cn';
 
 export function Spinner({ className }: { className?: string }) {
-  return <Loader2 className={cn('size-5 animate-spin text-brand-700', className)} aria-hidden="true" />;
+  return <Loader2 className={cn('size-5 animate-spin text-brand-accent', className)} aria-hidden="true" />;
 }
 
 export function LoadingState({
@@ -19,7 +19,9 @@ export function LoadingState({
       className={cn('flex flex-col items-center justify-center gap-3 px-6 py-16 text-center', className)}
       role="status"
     >
-      <Spinner className="size-6" />
+      <span className="flex size-11 items-center justify-center rounded-full border border-ink-200 bg-surface-raised shadow-card">
+        <Spinner className="size-5" />
+      </span>
       <p className="text-sm font-medium text-ink-500">{label}</p>
     </div>
   );
@@ -47,15 +49,15 @@ export function ErrorState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center rounded-2xl border border-brand-200 bg-brand-50/60 px-6 py-12 text-center',
+        'flex flex-col items-center justify-center rounded-xl border border-brand-200/80 bg-brand-50/50 px-6 py-12 text-center',
         className,
       )}
       role="alert"
     >
-      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-white text-brand-700 shadow-sm">
-        <AlertTriangle className="size-6" aria-hidden="true" />
+      <span className="mb-4 flex size-11 items-center justify-center rounded-full bg-surface-raised text-brand-accent shadow-card">
+        <AlertTriangle className="size-5" aria-hidden="true" />
       </span>
-      <h2 className="text-base font-semibold text-ink-900">{title}</h2>
+      <h2 className="type-title text-base text-ink-900">{title}</h2>
       <p className="mt-1.5 max-w-md text-sm leading-relaxed text-ink-600">{message}</p>
       {onRetry ? (
         <Button
@@ -88,14 +90,14 @@ export function EmptyState({
   return (
     <div
       className={cn(
-        'flex flex-col items-center justify-center rounded-xl border border-dashed border-ink-300 bg-ink-50/60 px-6 py-12 text-center',
+        'flex flex-col items-center justify-center rounded-xl border border-dashed border-ink-300 bg-ink-50/50 px-6 py-12 text-center',
         className,
       )}
     >
-      <span className="mb-4 flex size-12 items-center justify-center rounded-full bg-white text-ink-400 shadow-sm">
-        {icon ?? <SearchX className="size-6" aria-hidden="true" />}
+      <span className="mb-4 flex size-11 items-center justify-center rounded-full border border-ink-200 bg-surface-raised text-ink-500 shadow-card">
+        {icon ?? <SearchX className="size-5" aria-hidden="true" />}
       </span>
-      <h3 className="text-sm font-semibold text-ink-900">{title}</h3>
+      <h3 className="type-title text-sm text-ink-900">{title}</h3>
       {description ? (
         <p className="mt-1.5 max-w-sm text-sm leading-relaxed text-ink-500">{description}</p>
       ) : null}

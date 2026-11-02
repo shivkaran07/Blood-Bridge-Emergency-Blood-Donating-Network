@@ -6,7 +6,7 @@ export function TermsPage() {
     <InfoPage
       eyebrow="Terms of use"
       title="Terms of use"
-      description="The rules for using this educational prototype. They are written to match the behaviour actually implemented in Part 1."
+      description="The rules for using this educational prototype. They are written to match the behaviour actually implemented in the application."
     >
       <Alert variant="warning" title="Not a medical or emergency service">
         BloodBridge is not a hospital, blood bank, emergency dispatch service or medical adviser.
@@ -53,10 +53,11 @@ export function TermsPage() {
 
       <InfoSection title="4. Verification claims">
         <p>
-          Part 1 verification is database-backed. The interface must not describe it as blockchain
-          verification. No smart contract is deployed, no wallet is connected and no on-chain
-          transaction is created in this phase. Part 2 may add an authorized on-chain anchor, and
-          even then it would not replace clinical checks.
+          A hospital review decision is recorded in the application database and must never be
+          described as clinical proof. When the deployment enables the optional audit layer, an
+          authorized verifier wallet may anchor an opaque audit key. Even then, the anchor proves
+          only that a transaction was confirmed — it does not prove that blood is available,
+          compatible or safe, and it never replaces clinical checks.
         </p>
       </InfoSection>
 
@@ -91,7 +92,7 @@ export function TermsPage() {
 
       <InfoSection title="8. Changes">
         <p>
-          These terms may be updated as the project evolves. The Part 2 blockchain work will require
+          These terms may be updated as the project evolves. Enabling the audit layer requires
           additional terms covering wallet identity, transaction records and on-chain data
           visibility.
         </p>

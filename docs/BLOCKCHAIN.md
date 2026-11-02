@@ -1,295 +1,100 @@
-# Blockchain Integration — Part 1 State and Part 2 Plan
+# Blockchain integration
 
-> **Read this first.** BloodBridge Part 1 does **not** use a blockchain. No Solidity contract is
-> deployed, no wallet is connected, no RPC node is contacted and no transaction is created. The
-> application describes its verification as **database-backed** everywhere in the UI and API. This
-> document explains what *is* prepared, why it is prepared that way, and what Part 2 must actually
-> build.
+## Current implementation
 
----
+BloodBridge includes a working Solidity audit contract, Hardhat local-network configuration,
+deployment/role scripts, wallet ownership challenge endpoints, and a backend ethers.js adapter. The
+backend does not sign verifier transactions: an approved verifier must use their own wallet. The
+backend independently checks the transaction receipt, chain ID, recipient, sender, contract event,
+audit key and contract state before it updates the request to verified/rejected/completed.
 
-## 1. What Part 1 implements
+The request-review UI can connect MetaMask, sign wallet-binding challenges, validate the selected
+account and chain, submit the prepared contract call, and send its actual transaction hash to the
+backend for confirmation. Open operations can be reused or reconciled without blindly creating
+duplicate contract transactions. This browser-to-chain flow is implemented, but has not yet been
+exercised against a live local RPC/Supabase setup.
 
-Part 1 implements the **seam** for a later on-chain audit anchor. Nothing more.
+## Contract and privacy
 
-| Item | Location | Part 1 behaviour |
-| --- | --- | --- |
-| Opaque audit key | `blood_requests.blockchain_audit_key` | 64 lowercase hex chars, generated with `crypto.randomBytes(32)` at request creation time |
-| Synchronization state | `blood_requests.blockchain_sync_status` | Always created as `NOT_SCHEDULED`; no code advances it |
-| Transaction scaffold | `blockchain_transactions` table | Exists with constraints and indexes; **no application code inserts rows** |
-| Read-only status API | `GET /api/v1/blockchain/status` | Returns `operational: false`, `connected: false`, `verificationMode: "DATABASE"` |
-| Per-request audit view | `GET /api/v1/requests/:id/blockchain` | Returns the audit key and an empty transaction list |
-| Verification DTO | `serializers.ts` / `frontend/src/types/api.ts` | `mode: "DATABASE"`, `blockchainVerified: false` |
-| UI page | `/app/blockchain` | Explains the boundary; shows an honest empty state |
-| Environment placeholders | `backend/src/config/env.ts` | `BLOCKCHAIN_*` values are read but cannot make the integration operational |
+`contracts/contracts/BloodBridge.sol` stores only an opaque random `bytes32` request audit key,
+status, acting wallet, and block timestamp. It stores no names, contact details, blood group,
+location, request message, or patient/medical details. On-chain data is public and cannot be erased.
+An event proves that the transaction was recorded; it does not prove the underlying request is true,
+that a donor is eligible, or that blood was collected.
 
-The audit key is deliberately **opaque**. It contains no user ID, blood group, hospital name, phone
-number or timestamp. This matters for Part 2: anchoring a random nonce on a public chain leaks
-nothing about the person or the medical request, while still allowing the operator to prove that a
-particular record existed in a particular form at a particular time.
+OpenZeppelin `AccessControl` protects `VERIFIER_ROLE`; only `DEFAULT_ADMIN_ROLE` can grant or revoke
+it. The deploying address is the initial administrator and verifier. There are no token, payment,
+or payable functions. Contract states are `NONE`, `VERIFIED`, `REJECTED`, `CANCELLED`, and
+`COMPLETED`; only a `VERIFIED` record can be completed or cancelled, and terminal states cannot be
+overwritten.
 
-### Why keep the key if nothing uses it?
+## Local setup
 
-Because retrofitting identity into historical rows is error-prone. When Part 2 anchors a request,
-it must anchor a value that was fixed **before** the anchor existed. Generating the key at request
-creation avoids a migration that back-fills identifiers for already-verified requests.
+From the repository root:
 
----
-
-## 2. Why database verification is not blockchain verification
-
-These are different guarantees:
-
-| Property | Database verification (Part 1) | On-chain anchoring (Part 2) |
-| --- | --- | --- |
-| Who can assert it | An approved hospital verifier, through the API | An authorized verifier wallet, through a signed transaction |
-| Where it lives | `public.blood_requests` + `request_status_history` | A smart contract event / storage entry |
-| Who can alter it | A database administrator can | Practically immutable once confirmed |
-| Who can read it | Authorized application users | Anyone, including people outside the application |
-| What it proves | "This hospital account reviewed this request in BloodBridge" | "This exact audit key was committed at this block time" |
-| What it does **not** prove | Clinical compatibility, stock, donor eligibility, truthfulness | The same — an anchor proves commitment, not correctness |
-
-A blockchain anchor does not make a false claim true. If a verifier approves a fraudulent request,
-the anchor makes that approval permanently *visible*, not *correct*. This distinction must survive
-into Part 2 documentation and the viva.
-
----
-
-## 3. Schema already in place
-
-### 3.1 `blood_requests` columns
-
-```sql
-blockchain_audit_key   text not null
-  check (blockchain_audit_key ~ '^[a-f0-9]{64}$')
-  unique,
-
-blockchain_sync_status public.blockchain_sync_status
-  not null default 'NOT_SCHEDULED'
+```sh
+npm install
+npm run contracts:compile
+npm run contracts:test
+npm run chain
 ```
 
-### 3.2 `blockchain_sync_status` enum
+In another terminal, deploy to the local Hardhat node:
 
-| Value | Intended meaning in Part 2 |
-| --- | --- |
-| `NOT_SCHEDULED` | No anchor attempt has been made (all Part 1 rows) |
-| `AWAITING_WALLET` | A verifier action requested an anchor; wallet confirmation is pending |
-| `SUBMITTED` | A transaction hash exists; confirmation is pending |
-| `CONFIRMED` | The transaction is mined and the receipt matches the expected event |
-| `FAILED` | Submission or confirmation failed permanently; the database verification still stands |
-
-Part 1 only ever produces `NOT_SCHEDULED`. The enum values are **not** cosmetic claims — nothing in
-the codebase writes the other values.
-
-### 3.3 `blockchain_transactions`
-
-```sql
-id                 uuid primary key
-request_id         uuid not null  -> blood_requests(id) on delete cascade
-blockchain_audit_key text not null          -- must match the request's key by convention
-network_name       text not null
-chain_id           bigint not null
-contract_address   text not null            -- 0x + 40 hex
-transaction_hash   text                     -- 0x + 64 hex, unique when present
-action             text not null            -- e.g. ANCHOR_VERIFICATION
-transaction_status blockchain_transaction_status not null default 'PENDING'
-block_number       bigint
-actor_user_id      uuid  -> profiles(id) on delete set null
-created_at, updated_at timestamptz
+```sh
+npm run contracts:deploy
 ```
 
-Constraints that matter for Part 2 correctness:
+The deployment script writes the address to ignored `backend/.env.local` and
+`frontend/.env.local`, stores a local deployment record, and syncs the ABI. Grant the verifier role
+to an approved hospital's verified wallet (replace with the actual wallet address):
 
-- `CONFIRMED` rows **must** have both a transaction hash and a block number. The database itself
-  refuses to store an unconfirmed "confirmed" claim.
-- `transaction_hash` is unique when present, preventing double-recording of one hash.
-- `contract_address` and `transaction_hash` formats are validated by `CHECK` constraints.
-- `blockchain_sync_status` and `blockchain_transaction_status` are separate enums on purpose: the
-  request-level state is a summary; the transaction-level state is the auditable fact.
-
-### 3.4 Access rules
-
-- `blockchain_transactions` has RLS enabled.
-- Browser roles have **no write** privilege.
-- Only administrators may select rows directly.
-- The API exposes only the prepared, read-only views described above.
-
----
-
-## 4. Intended Part 2 architecture
-
-```
-Approved verifier (browser)
-   │ 1. MetaMask connects
-   │ 2. POST /wallet/challenge  -> server nonce
-   │ 3. personal_sign(challenge)
-   │ 4. POST /wallet/verify     -> wallet bound to hospital profile
-   │
-   ▼
-Express API
-   │ 5. verify + reject request normally (database transaction)
-   │ 6. create blockchain_transactions row (PENDING)
-   │ 7. send tx via ethers.js using the verifier's wallet or a relayer
-   ▼
-Solidity contract (AccessControl)
-   │ 8. emit VerificationAnchored(auditKey, action, actor, timestamp)
-   ▼
-RPC node / Hardhat / Sepolia
-   │ 9. receipt -> block number
-   ▼
-Express API
-   │ 10. update transaction row to CONFIRMED with real hash + block
-   │ 11. update request.blockchain_sync_status to CONFIRMED
-   ▼
-UI shows "on-chain anchored" — separately from "database verified"
+```sh
+set VERIFIER_ADDRESS=0x...
+npm run contracts:grant-verifier
 ```
 
-### 4.1 Contract sketch (not yet written)
+Configure the backend's database/Supabase settings using `backend/.env.example`. The backend chain
+settings must match the deployed local contract and local RPC (`http://127.0.0.1:8545`, chain ID
+31337). Development wallets exposed by Hardhat are public test keys; never use real assets or a
+personal wallet's private key on this network.
 
-```solidity
-// SPDX-License-Identifier: MIT
-pragma solidity ^0.8.24;
+## Backend workflow and API
 
-import "@openzeppelin/contracts/access/AccessControl.sol";
+1. An authenticated account obtains a short-lived, one-time challenge bound to its user ID and
+   wallet address (`POST /api/v1/wallet/challenge`).
+2. The account signs the exact message; the backend recovers the address and atomically consumes
+   the challenge (`POST /api/v1/wallet/verify`). This proves control only, not hospital authority.
+3. Hospital application approval, wallet binding and on-chain `VERIFIER_ROLE` are independently
+   required before an anchor operation is prepared.
+4. The backend stores a pending operation and returns its contract function/arguments.
+5. After a verifier wallet submits the call, the API accepts the transaction hash and independently
+   validates the receipt. Only confirmed expected events and matching contract state change the
+   request's application status.
+6. A database failure after chain success is flagged for reconciliation; the chain transaction is
+   never erased. Failed/reverted attempts do not change the request decision.
 
-contract BloodBridgeAudit is AccessControl {
-    bytes32 public constant VERIFIER_ROLE = keccak256("VERIFIER_ROLE");
+Relevant API paths include `/api/v1/wallet/challenge`, `/api/v1/wallet/verify`,
+`/api/v1/wallet/status`, `POST /api/v1/requests/:id/verify`,
+`POST /api/v1/requests/:id/reject`, `POST /api/v1/requests/:id/chain-complete`,
+`POST /api/v1/blockchain/operations/:id/confirm`, and
+`POST /api/v1/blockchain/operations/:id/reconcile`. Authentication and application roles are
+required; see [API docs](./API.md).
 
-    event VerificationAnchored(
-        bytes32 indexed auditKey,
-        bytes32 indexed action,
-        address indexed actor,
-        uint64 timestamp
-    );
+## Configuration and optional Sepolia
 
-    error AlreadyAnchored(bytes32 auditKey);
+Backend configuration uses `BLOCKCHAIN_ENABLED`, `BLOCKCHAIN_NETWORK_NAME`,
+`BLOCKCHAIN_CHAIN_ID`, `BLOCKCHAIN_RPC_URL`, `BLOCKCHAIN_CONTRACT_ADDRESS`, confirmation count and
+receipt timeout. The current default is **disabled / database mode** until a contract address and
+enabled flag are configured. Never commit `.env`, testnet private keys, or RPC secrets. Sepolia
+deployment is optional and requires a user-managed RPC endpoint, a test-only deployer key in
+`DEPLOYER_PRIVATE_KEY`, and testnet funds. Mainnet deployment is not part of this project.
 
-    mapping(bytes32 => bool) private _anchored;
+## Tests and known gaps
 
-    constructor(address admin) {
-        _grantRole(DEFAULT_ADMIN_ROLE, admin);
-    }
-
-    function anchor(bytes32 auditKey, bytes32 action) external onlyRole(VERIFIER_ROLE) {
-        if (_anchored[auditKey]) revert AlreadyAnchored(auditKey);
-        _anchored[auditKey] = true;
-        emit VerificationAnchored(auditKey, action, msg.sender, uint64(block.timestamp));
-    }
-
-    function isAnchored(bytes32 auditKey) external view returns (bool) {
-        return _anchored[auditKey];
-    }
-}
-```
-
-Design notes:
-
-- Only **hashes** go on-chain. The audit key is already opaque; no personal data is ever sent.
-- `action` is a code (for example `keccak256("VERIFY")`), not free text.
-- Duplicate anchors revert, so a replayed request cannot overwrite history.
-- No upgradeability. An auditable append-only record is more useful than a mutable proxy here.
-- Role administration stays with a deploy-time admin; the backend never holds that key.
-
-### 4.2 Wallet identity
-
-A wallet address alone is not an identity. Part 2 needs a challenge/response binding:
-
-1. `POST /wallet/challenge` returns a random nonce, a human-readable message including the domain
-   and expiry, and stores `(user_id, nonce, expires_at, used_at)` in a new table.
-2. The browser calls `personal_sign(message, address)`.
-3. `POST /wallet/verify` recovers the address, checks the nonce is unused and unexpired, marks it
-   used, and stores the address on the approved hospital profile.
-4. Only then may that hospital submit anchor transactions.
-
-Replay protection is essential: nonce single-use, short expiry, bound to the authenticated user,
-and never reused across chain IDs or contract addresses.
-
-### 4.3 Failure handling
-
-| Failure | Required behaviour |
-| --- | --- |
-| User rejects MetaMask prompt | Transaction row stays `PENDING`; request remains database-verified; UI says "not anchored" |
-| RPC unreachable | Mark `FAILED` after bounded retries; never fake a hash |
-| Transaction reverts | Mark `FAILED` with the revert reason code; do not retry blindly |
-| Submitted but never mined | Keep `SUBMITTED`; a reconciliation job checks the receipt later |
-| Confirmed but event missing/mismatched | Mark `FAILED`; do not set request status to `CONFIRMED` |
-| Duplicate anchor attempt | `AlreadyAnchored` revert is surfaced as an existing-anchor success, not a new transaction |
-
-The governing rule: **the database must never claim a state the chain has not reached.** A failed
-anchor is acceptable; a fabricated confirmation is not.
-
-### 4.4 New migration required in Part 2
-
-```sql
-create table public.wallet_bindings (
-  user_id       uuid primary key references public.profiles (id) on delete cascade,
-  wallet_address text not null unique,
-  chain_id      bigint not null,
-  verified_at   timestamptz not null default now()
-);
-
-create table public.wallet_challenges (
-  id         uuid primary key default gen_random_uuid(),
-  user_id    uuid not null references public.profiles (id) on delete cascade,
-  nonce      text not null unique,
-  expires_at timestamptz not null,
-  used_at    timestamptz
-);
-```
-
-Both tables are backend-only for writes; RLS should allow a user to read only their own binding.
-
----
-
-## 5. What the UI must say in Part 2
-
-Acceptable wording:
-
-- "Database verified — anchored on chain" only after `blockchain_sync_status = CONFIRMED`.
-- "Database verified — on-chain anchor pending" while `AWAITING_WALLET`/`SUBMITTED`.
-- "Database verified — on-chain anchor failed" for `FAILED`, with a retry action.
-- A transaction hash and block number only when they came from a real receipt.
-
-Unacceptable wording, in any phase:
-
-- "Blockchain verified" as a synonym for "a hospital approved it".
-- A fake hash such as `0x000...`, a placeholder block number, or a demo transaction row.
-- "Immutable" or "trustless" without explaining what is actually anchored.
-- Any claim that the chain validates medical compatibility, stock or donor eligibility.
-
----
-
-## 6. Honest limitations of an on-chain audit approach
-
-1. **Garbage in, permanent garbage out.** Anchoring does not validate the claim.
-2. **Metadata leakage.** Transaction timing, verifier wallet and frequency are public. Even opaque
-   keys can be correlated if the operator publishes a mapping.
-3. **Cost and latency.** Every anchor costs gas and takes block time; emergency workflows cannot
-   block on it.
-4. **Key management.** A verifier wallet is a new high-value secret. Compromise means forged
-   anchors.
-5. **Identity gap.** A wallet proves control of a key, not employment at a hospital. Institutional
-   binding still depends on administrator approval in the database.
-6. **Regulatory scope.** On-chain personal data can conflict with erasure obligations, which is
-   exactly why only opaque hashes are anchored.
-7. **No privacy guarantee.** A public chain reveals that *some* verification happened at a time,
-   even if not what it was about.
-
-These are documented so the project does not overstate what Part 2 will achieve.
-
----
-
-## 7. Suggested Part 2 build order
-
-1. Contract + Hardhat config + OpenZeppelin dependency.
-2. Contract tests: role enforcement, duplicate revert, event emission, `isAnchored`.
-3. Wallet migrations and challenge/verify endpoints with replay tests.
-4. Transaction repository writes (insert `PENDING`, then transition).
-5. `ethers.js` integration behind the existing service interface.
-6. Receipt reconciliation and failure states.
-7. Frontend wallet connection, network guard, pending/failed/confirmed states.
-8. End-to-end run on the Hardhat local network; optional Sepolia deployment.
-9. Documentation and viva update with real hashes and real limitations.
-
-Do **not** restructure the existing schema or services. The seam was designed so Part 2 extends it
-rather than replaces it.
+Run `npm run contracts:compile`, `npm run contracts:test`, and backend tests with `npm test -w
+backend`. The contract suite covers roles, duplicate keys, state transitions, event emission and
+reverts; backend tests use a semantic fake chain plus real signature cryptography. Neither is a
+substitute for a full live local-RPC integration test. MetaMask transaction submission, explorer
+links and the full UI reconciliation flow remain unfinished. Do not claim Sepolia or production
+deployment has occurred.

@@ -16,14 +16,17 @@ describe('API foundation', () => {
     await db.close();
   });
 
-  it('reports health and truthful Part 1 metadata', async () => {
+  it('reports health and truthful metadata', async () => {
     const health = await request(app).get('/api/v1/health').expect(200);
     expect(health.body.data.status).toBe('ok');
-    expect(health.body.data.phase).toBe('PART_1');
+    expect(health.body.data.phase).toBe('PART_2');
 
     const meta = await request(app).get('/api/v1/meta').expect(200);
-    expect(meta.body.data.blockchain.operational).toBe(false);
+    // The default test config has no contract configured - the honest state
+    // is a database-backed deployment that never claims on-chain activity.
     expect(meta.body.data.blockchain.verificationMode).toBe('DATABASE');
+    expect(meta.body.data.blockchain.contractConfigured).toBe(false);
+    expect(meta.body.data.blockchain.operational).toBe(false);
   });
 
   it('requires authentication for protected endpoints', async () => {

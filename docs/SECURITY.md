@@ -164,7 +164,12 @@ A production deployment would additionally need:
 - a DPIA/legal review appropriate to the jurisdiction,
 - encryption-at-rest verification and backup controls.
 
-Part 1 has no self-service deletion/export UI.
+Profile Settings provides export and recent-password-confirmed account anonymization. It removes
+direct BloodBridge profile, donor, hospital, wallet, and notification data; cancels active requests;
+and retains scrubbed request/audit history. The Supabase Auth record is retained with a
+non-deliverable email, cleared user metadata, and sign-in ban. This is not deletion of a linked
+external identity-provider account and does not replace a jurisdiction-specific erasure process.
+Email notifications are opt-in, use a durable outbox, and contain no request or health details.
 
 ---
 
@@ -223,8 +228,8 @@ These must be scheduled before any real deployment.
 | --- | --- | --- |
 | No hosted RLS verification | High for production | Documented; must verify with real project |
 | Service-role compromise | Critical | Server-only storage, placeholder checks, rotation procedure documented |
-| In-memory rate limits | Medium | Single-instance only; shared store needed for scale |
+| Redis availability/configuration | Medium | Production requires shared Redis; local development uses in-memory limits |
 | Heuristic abuse detection | Medium | Human review; no automated bans |
-| No account deletion/export | Medium (privacy) | Documented gap; add in later phase |
+| Supabase Auth retains a disabled anonymized identity | Medium (privacy) | Self-service app-level anonymization; external identity-provider erasure remains manual |
 | No independent security audit | High for real use | Required before production |
 | No on-chain proof in Part 1 | Expected | Clearly labelled; Part 2 scope |

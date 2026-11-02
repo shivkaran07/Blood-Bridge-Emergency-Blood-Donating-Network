@@ -7,7 +7,6 @@ import {
   Building2,
   CalendarClock,
   CheckCircle2,
-  Copy,
   ExternalLink,
   HandHeart,
   MapPin,
@@ -37,6 +36,7 @@ import {
   VerificationTag,
 } from '../../components/ui/Badge';
 import { Button } from '../../components/ui/Button';
+import { CopyButton } from '../../components/ui/CopyButton';
 import { Modal } from '../../components/ui/Modal';
 import { Field, Select, Textarea } from '../../components/ui/Field';
 import { ErrorState, LoadingState } from '../../components/ui/States';
@@ -44,6 +44,7 @@ import { Table, TBody, Td, Th, THead, Tr } from '../../components/ui/Table';
 import { BloodGroupMark } from '../../components/requests/RequestCard';
 import { ResponseCard } from '../../components/responses/ResponseCard';
 import type { RequestHistoryEntry } from '../../types/api';
+import { performRequestDecision } from '../../lib/blockchain/submitAnchor';
 
 type RequestDialog = 'cancel' | 'complete' | 'verify' | 'reject' | null;
 
@@ -124,14 +125,20 @@ export function RequestDetailPage() {
         case 'cancel':
           return api.cancelRequest(token, id, action.reason);
         case 'complete':
+          if (me?.permissions.isApprovedVerifier) {
+            const chainStatus = await api.blockchainStatus(token);
+            if (chainStatus.verificationMode === 'ON_CHAIN') {
+              return performRequestDecision(token, id, { type: 'complete' });
+            }
+          }
           return api.completeRequest(token, id, action.status, action.note || null);
         case 'verify':
-          return api.verifyRequest(token, id, action.reason || null);
+          return performRequestDecision(token, id, { type: 'verify', reason: action.reason });
         case 'reject':
-          return api.rejectRequest(token, id, action.reason);
+          return performRequestDecision(token, id, { type: 'reject', reason: action.reason });
       }
     },
-    onSuccess: async (_result, action) => {
+    onSuccess: async (result, action) => {
       const messages: Record<RequestAction['type'], [string, string]> = {
         respond: ['Offer recorded', 'The requester can now review your offer.'],
         claim: ['Request claimed', 'The requester has been notified that review started.'],
@@ -140,7 +147,12 @@ export function RequestDetailPage() {
         verify: ['Request verified', 'It is now visible to available donors with this exact blood group.'],
         reject: ['Request not verified', 'The requester can see the review reason.'],
       };
-      const [title, message] = messages[action.type];
+      const [title, message] = result && 'mode' in result && result.mode === 'ON_CHAIN'
+        ? [
+            action.type === 'reject' ? 'Request decision anchored' : 'Request verified on chain',
+            'The backend confirmed the wallet transaction receipt and expected contract event.',
+          ]
+        : messages[action.type];
       toast.success(title, message);
       setDialog(null);
       setReason('');
@@ -194,7 +206,7 @@ export function RequestDetailPage() {
   if (requestQuery.isError) {
     return (
       <div className="space-y-4">
-        <Link to="/app/requests" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-ink-900">
+        <Link to="/app/requests" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-ink-900">
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to request feed
         </Link>
@@ -247,22 +259,25 @@ export function RequestDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <Link to="/app/requests" className="inline-flex items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-ink-900">
+        <Link to="/app/requests" className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-ink-500 hover:text-ink-900">
           <ArrowLeft className="size-4" aria-hidden="true" />
           Back to feed
         </Link>
         <div className="flex flex-wrap items-center gap-2">
           {request.isOwner ? <Badge tone="outline">Your request</Badge> : null}
-          <Badge tone="neutral">Part 1 · database verification</Badge>
+          <Badge tone="neutral">Request audit</Badge>
         </div>
       </div>
 
-      <div className="rounded-2xl border border-ink-200 bg-white p-5 shadow-card sm:p-6">
+      <div className="rounded-xl border border-ink-200/90 bg-surface-raised p-5 shadow-card sm:p-6">
         <div className="flex flex-col gap-5 sm:flex-row sm:items-start">
           <BloodGroupMark group={request.bloodGroup} size="lg" />
           <div className="min-w-0 flex-1">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-xl font-semibold tracking-tight text-ink-900 sm:text-2xl">
+            <p className="text-[0.625rem] font-semibold uppercase tracking-[0.12em] text-ink-400">
+              REQ-{request.id.slice(0, 8).toUpperCase()}
+            </p>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <h1 className="type-title text-xl text-ink-900 sm:text-2xl">
                 {request.unitsRequested} {pluralize(request.unitsRequested, 'unit')} of{' '}
                 {request.bloodGroup} needed
               </h1>
@@ -271,15 +286,15 @@ export function RequestDetailPage() {
             </div>
             <p className="mt-2 flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-ink-600">
               <span className="inline-flex items-center gap-1.5">
-                <Building2 className="size-4 text-ink-400" aria-hidden="true" />
+                <Building2 className="size-4 text-ink-500" aria-hidden="true" />
                 <span className="font-medium text-ink-800">{request.hospitalName}</span>
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <MapPin className="size-4 text-ink-400" aria-hidden="true" />
+                <MapPin className="size-4 text-ink-500" aria-hidden="true" />
                 {request.hospitalArea}, {request.hospitalCity}
               </span>
               <span className="inline-flex items-center gap-1.5">
-                <CalendarClock className="size-4 text-ink-400" aria-hidden="true" />
+                <CalendarClock className="size-4 text-ink-500" aria-hidden="true" />
                 Needed by {formatDateTime(request.neededBy)}
               </span>
             </p>
@@ -375,7 +390,7 @@ export function RequestDetailPage() {
         </div>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.8fr)]">
+      <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.5fr)_minmax(0,0.8fr)]">
         <div className="space-y-6">
           <SectionCard
             title="Request details"
@@ -491,7 +506,7 @@ export function RequestDetailPage() {
                       {matchesQuery.data.totalCandidates} candidates
                     </Badge>
                     <Badge tone="outline">Blood group {matchesQuery.data.bloodGroup}</Badge>
-                    <span className="text-xs text-ink-400">Showing up to 20 masked results</span>
+                    <span className="text-xs text-ink-500">Showing up to 20 masked results</span>
                   </div>
                   <Table minWidth={620}>
                     <THead>
@@ -513,7 +528,7 @@ export function RequestDetailPage() {
                               ? [match.area, match.city].filter(Boolean).join(', ')
                               : 'Not provided'}
                             {match.distanceKm !== null ? (
-                              <span className="ml-1 text-xs text-ink-400">
+                              <span className="ml-1 text-xs text-ink-500">
                                 · ~{match.distanceKm} km
                               </span>
                             ) : null}
@@ -532,7 +547,7 @@ export function RequestDetailPage() {
                 </>
               ) : (
                 <div className="rounded-xl border border-dashed border-ink-300 bg-ink-50 p-6 text-center">
-                  <Users className="mx-auto size-6 text-ink-400" aria-hidden="true" />
+                  <Users className="mx-auto size-6 text-ink-500" aria-hidden="true" />
                   <p className="mt-2 text-sm font-medium text-ink-800">No candidates found</p>
                   <p className="mt-1 text-xs text-ink-500">
                     No available donor with this exact blood group matched the city or distance
@@ -555,43 +570,106 @@ export function RequestDetailPage() {
           {blockchainQuery.data ? (
             <SectionCard
               title="Audit reference"
-              description="Opaque audit key and Part 1 synchronization state. No blockchain transaction exists in this phase."
+              description={
+                blockchainQuery.data.verificationMode === 'ON_CHAIN'
+                  ? 'Opaque audit key, synchronization state and any anchor transactions confirmed by the backend. An anchor does not validate medical facts.'
+                  : 'Opaque audit key and synchronization state for this deployment. Database mode records no blockchain transaction.'
+              }
               actions={<BlockchainStatusBadge status={blockchainQuery.data.blockchainSyncStatus} />}
             >
               <dl className="grid gap-4 sm:grid-cols-2">
                 <DetailItem
                   label="Audit key"
                   value={
-                    <span className="flex items-center gap-2">
+                    <span className="flex flex-wrap items-center gap-1">
                       <code className="break-all rounded bg-ink-100 px-1.5 py-0.5 text-xs">
                         {blockchainQuery.data.blockchainAuditKey}
                       </code>
-                      <button
-                        type="button"
-                        className="rounded p-1 text-ink-400 hover:bg-ink-100 hover:text-ink-700"
-                        aria-label="Copy audit key"
-                        onClick={() => {
-                          void navigator.clipboard?.writeText(
-                            blockchainQuery.data.blockchainAuditKey,
-                          );
-                          toast.info('Audit key copied');
-                        }}
-                      >
-                        <Copy className="size-3.5" />
-                      </button>
+                      <CopyButton
+                        value={blockchainQuery.data.blockchainAuditKey}
+                        label="Copy audit key"
+                      />
                     </span>
                   }
                 />
                 <DetailItem label="Transactions recorded" value={String(blockchainQuery.data.transactionCount)} />
-                <DetailItem label="Verification mode" value="Database (Part 1)" />
+                <DetailItem
+                  label="Verification mode"
+                  value={blockchainQuery.data.verificationMode === 'ON_CHAIN' ? 'On-chain anchoring' : 'Database'}
+                />
                 <DetailItem
                   label="On-chain verified"
                   value={blockchainQuery.data.blockchainVerified ? 'Yes' : 'No'}
                 />
               </dl>
               <p className="mt-3 text-xs leading-relaxed text-ink-500">{blockchainQuery.data.note}</p>
-              <Link to="/app/blockchain" className="mt-3 inline-flex items-center gap-1 text-xs font-semibold text-brand-700 hover:text-brand-800">
-                Verification & audit status
+
+              {blockchainQuery.data.transactions.length > 0 ? (
+                <div className="mt-4">
+                  <Table minWidth={720}>
+                    <THead>
+                      <Th>Action</Th>
+                      <Th>Transaction</Th>
+                      <Th>Status</Th>
+                      <Th>Recorded</Th>
+                    </THead>
+                    <TBody>
+                      {blockchainQuery.data.transactions.map((transaction) => (
+                        <Tr key={transaction.id}>
+                          <Td>
+                            <span className="rounded bg-ink-100 px-1.5 py-0.5 font-mono text-[0.7rem] text-ink-700">
+                              {transaction.action}
+                            </span>
+                          </Td>
+                          <Td>
+                            {transaction.transactionHash ? (
+                              <span className="flex items-center gap-1">
+                                <code className="text-xs">{transaction.transactionHash.slice(0, 10)}…{transaction.transactionHash.slice(-6)}</code>
+                                <CopyButton
+                                  value={transaction.transactionHash}
+                                  label="Copy transaction hash"
+                                />
+                                {transaction.chainId === 11155111 ? (
+                                  <a
+                                    href={`https://sepolia.etherscan.io/tx/${transaction.transactionHash}`}
+                                    target="_blank"
+                                    rel="noreferrer noopener"
+                                    className="inline-flex h-11 min-w-11 items-center justify-center rounded-lg text-ink-500 hover:bg-ink-100 hover:text-ink-800"
+                                    aria-label="Open transaction in Etherscan"
+                                  >
+                                    <ExternalLink className="size-4" aria-hidden="true" />
+                                  </a>
+                                ) : null}
+                              </span>
+                            ) : (
+                              <span className="text-xs text-ink-500">No hash yet</span>
+                            )}
+                          </Td>
+                          <Td>
+                            <Badge
+                              tone={
+                                transaction.status === 'CONFIRMED'
+                                  ? 'success'
+                                  : transaction.status === 'FAILED'
+                                    ? 'danger'
+                                    : 'outline'
+                              }
+                            >
+                              {transaction.status}
+                            </Badge>
+                          </Td>
+                          <Td className="whitespace-nowrap text-xs">
+                            {formatDateTime(transaction.createdAt)}
+                          </Td>
+                        </Tr>
+                      ))}
+                    </TBody>
+                  </Table>
+                </div>
+              ) : null}
+
+              <Link to="/app/blockchain" className="mt-2 inline-flex min-h-11 items-center gap-1 text-xs font-semibold text-brand-accent hover:text-brand-accent-strong">
+                Verification &amp; audit status
                 <ExternalLink className="size-3.5" aria-hidden="true" />
               </Link>
             </SectionCard>
@@ -622,7 +700,7 @@ export function RequestDetailPage() {
           {request.permissions.canViewRequesterContact && request.requesterContactPhone ? (
             <Card>
               <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-                <Phone className="size-4 text-ink-400" aria-hidden="true" />
+                <Phone className="size-4 text-ink-500" aria-hidden="true" />
                 Requester contact
               </h2>
               <p className="mt-2 text-sm text-ink-600">
@@ -642,7 +720,7 @@ export function RequestDetailPage() {
           ) : (
             <Card>
               <h2 className="flex items-center gap-2 text-sm font-semibold text-ink-900">
-                <ShieldQuestion className="size-4 text-ink-400" aria-hidden="true" />
+                <ShieldQuestion className="size-4 text-ink-500" aria-hidden="true" />
                 Contact protected
               </h2>
               <p className="mt-2 text-xs leading-relaxed text-ink-500">
@@ -656,7 +734,7 @@ export function RequestDetailPage() {
             <h2 className="text-sm font-semibold text-ink-900">Safety and scope</h2>
             <ul className="mt-3 space-y-2 text-xs leading-relaxed text-ink-600">
               <li className="flex gap-2">
-                <Siren className="mt-0.5 size-3.5 shrink-0 text-brand-600" aria-hidden="true" />
+                <Siren className="mt-0.5 size-3.5 shrink-0 text-brand-accent" aria-hidden="true" />
                 For a life-threatening emergency, call local emergency services and the hospital
                 directly.
               </li>
@@ -666,14 +744,15 @@ export function RequestDetailPage() {
               </li>
               <li className="flex gap-2">
                 <ShieldCheck className="mt-0.5 size-3.5 shrink-0 text-accent-600" aria-hidden="true" />
-                Hospital verification in Part 1 is database-backed only.
+                A hospital decision is recorded in the application database. Any on-chain anchor is
+                an audit signal, not medical proof.
               </li>
             </ul>
           </Card>
 
           <Card>
             <h2 className="text-sm font-semibold text-ink-900">Request lookup</h2>
-            <p className="mt-1.5 break-all text-xs text-ink-400">{request.id}</p>
+            <p className="mt-1.5 break-all text-xs text-ink-500">{request.id}</p>
           </Card>
         </aside>
       </div>
@@ -707,7 +786,9 @@ export function RequestDetailPage() {
         open={dialog === 'complete'}
         onClose={() => setDialog(null)}
         title="Record request completion"
-        description="This updates application state only. It is not a medical confirmation that a donation occurred."
+        description={blockchainQuery.data?.verificationMode === 'ON_CHAIN'
+          ? 'The approved verifier wallet will record completion on the configured contract. This is not proof that blood was collected.'
+          : 'This updates application state only. It is not a medical confirmation that a donation occurred.'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setDialog(null)}>Cancel</Button>
@@ -719,7 +800,7 @@ export function RequestDetailPage() {
       >
         {dialogError ? <Alert variant="danger" className="mb-3">{dialogError}</Alert> : null}
         <div className="space-y-4">
-          <Field label="Completion status" htmlFor="completion-status" required>
+          {blockchainQuery.data?.verificationMode === 'ON_CHAIN' ? null : <Field label="Completion status" htmlFor="completion-status" required>
             <Select
               id="completion-status"
               value={completionStatus}
@@ -730,15 +811,15 @@ export function RequestDetailPage() {
               <option value="PARTIALLY_FULFILLED">Partially fulfilled</option>
               <option value="FULFILLED">Fulfilled</option>
             </Select>
-          </Field>
-          <Field label="Note" htmlFor="completion-note" optional hint="Visible in the request status history.">
+          </Field>}
+          {blockchainQuery.data?.verificationMode === 'ON_CHAIN' ? null : <Field label="Note" htmlFor="completion-note" optional hint="Visible in the request status history.">
             <Textarea
               id="completion-note"
               value={note}
               onChange={(event) => setNote(event.target.value)}
               placeholder="Optional coordination note."
             />
-          </Field>
+          </Field>}
         </div>
       </Modal>
 
@@ -746,7 +827,9 @@ export function RequestDetailPage() {
         open={dialog === 'verify'}
         onClose={() => setDialog(null)}
         title="Verify this request"
-        description="You are recording a database verification as an approved hospital reviewer. This is not a blockchain verification."
+        description={blockchainQuery.data?.verificationMode === 'ON_CHAIN'
+          ? 'Your wallet will record this verification on the configured contract. The transaction proves the decision was recorded, not that the request details are medically correct.'
+          : 'You are recording a database verification as an approved hospital reviewer. This is not a blockchain verification.'}
         footer={
           <>
             <Button variant="ghost" onClick={() => setDialog(null)}>Cancel</Button>
@@ -807,7 +890,7 @@ export function RequestDetailPage() {
 function DetailItem({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div>
-      <dt className="text-xs font-medium uppercase tracking-wide text-ink-400">{label}</dt>
+      <dt className="text-xs font-medium uppercase tracking-wide text-ink-500">{label}</dt>
       <dd className="mt-1 text-sm font-medium text-ink-800">{value}</dd>
     </div>
   );
@@ -821,17 +904,17 @@ function RequestTimeline({ items }: { items: RequestHistoryEntry[] }) {
     <ol className="relative space-y-5 border-l border-ink-200 pl-5">
       {items.map((entry) => (
         <li key={entry.id} className="relative">
-          <span className="absolute -left-[1.4rem] top-1.5 size-2.5 rounded-full border-2 border-white bg-brand-500" />
+          <span className="absolute -left-[1.4rem] top-1.5 size-2.5 rounded-full border-2 border-surface-raised bg-brand-500" />
           <div className="flex flex-wrap items-center gap-2">
             <RequestStatusBadge status={entry.toStatus} />
             {entry.fromStatus ? (
-              <span className="text-xs text-ink-400">
+              <span className="text-xs text-ink-500">
                 from {requestStatusLabels[entry.fromStatus]}
               </span>
             ) : null}
           </div>
           <p className="mt-1 text-sm text-ink-700">{entry.reason ?? 'Status updated.'}</p>
-          <p className="mt-0.5 text-xs text-ink-400">
+          <p className="mt-0.5 text-xs text-ink-500">
             {entry.actorName ?? 'System'} · {formatDateTime(entry.createdAt)}
           </p>
         </li>

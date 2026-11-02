@@ -13,20 +13,34 @@ export async function createNotification(
   db: Db,
   input: NotificationInput,
 ): Promise<NotificationRow> {
-  const result = await db.query<NotificationRow>(
-    `insert into public.notifications
-       (recipient_user_id, notification_type, title, message, related_request_id)
-     values ($1, $2, $3, $4, $5)
-     returning *`,
-    [
-      input.recipientUserId,
-      input.notificationType,
-      input.title,
-      input.message,
-      input.relatedRequestId,
-    ],
-  );
-  return result.rows[0]!;
+  return db.transaction(async (tx) => {
+    const result = await tx.query<NotificationRow>(
+      `insert into public.notifications
+         (recipient_user_id, notification_type, title, message, related_request_id)
+       values ($1, $2, $3, $4, $5)
+       returning *`,
+      [
+        input.recipientUserId,
+        input.notificationType,
+        input.title,
+        input.message,
+        input.relatedRequestId,
+      ],
+    );
+    const notification = result.rows[0]!;
+    await tx.query(
+      `insert into public.notification_email_outbox (notification_id)
+       select $1
+        where exists (
+          select 1
+            from public.profiles
+           where id = $2 and email_notifications_enabled = true
+        )
+       on conflict (notification_id) do nothing`,
+      [notification.id, input.recipientUserId],
+    );
+    return notification;
+  });
 }
 
 export async function createNotifications(

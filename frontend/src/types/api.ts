@@ -41,7 +41,8 @@ export type BlockchainSyncStatus =
   | 'AWAITING_WALLET'
   | 'SUBMITTED'
   | 'CONFIRMED'
-  | 'FAILED';
+  | 'FAILED'
+  | 'NEEDS_RECONCILIATION';
 
 export interface Profile {
   id: string;
@@ -96,6 +97,8 @@ export interface Me {
     isApprovedVerifier: boolean;
   };
   profileComplete: boolean;
+  emailNotificationsEnabled: boolean;
+  emailNotificationsAvailable: boolean;
   donorProfile: DonorProfile | null;
   hospitalProfile: HospitalProfile | null;
   unreadNotifications: number;
@@ -339,6 +342,8 @@ export interface RequesterSummary {
   verified: number;
   fulfilled: number;
   cancelled: number;
+  /** Requests whose deadline passed and which were marked EXPIRED by the backend. */
+  expired?: number;
   responses_received: number;
 }
 
@@ -377,13 +382,19 @@ export interface DashboardData {
 export interface BlockchainStatus {
   phase: string;
   prepared: boolean;
-  connected: false;
-  operational: false;
+  connected: boolean;
+  operational: boolean;
   enabledByConfiguration: boolean;
   contractAddressConfigured: boolean;
   networkName: string;
   chainId: number;
-  verificationMode: 'DATABASE';
+  verificationMode: 'DATABASE' | 'ON_CHAIN';
+  contractAddress?: string | null;
+  chainHealth?: { connected: boolean; chainId: number | null; latestBlock: number | null; error: string | null } | null;
+  operations?: Array<{
+    id: string; requestId: string; transactionHash: string | null; status: string;
+    action: string; networkName: string; chainId: number; createdAt: string;
+  }>;
   syncCounts: Record<BlockchainSyncStatus, number>;
   pendingAnchors: number;
   transactionsRecorded: number;
@@ -408,7 +419,7 @@ export interface RequestBlockchainRecord {
   requestId: string;
   blockchainAuditKey: string;
   blockchainSyncStatus: BlockchainSyncStatus;
-  verificationMode: 'DATABASE';
+  verificationMode: 'DATABASE' | 'ON_CHAIN';
   blockchainVerified: boolean;
   transactionCount: number;
   transactions: Array<{
@@ -421,6 +432,63 @@ export interface RequestBlockchainRecord {
     blockNumber: number | null;
     createdAt: string;
   }>;
+  note: string;
+}
+
+export interface AnchorOperation {
+  operationId: string;
+  requestId: string;
+  auditKey: string;
+  action: 'VERIFY_REQUEST' | 'REJECT_REQUEST' | 'FULFILL_REQUEST';
+  functionName: 'recordVerifiedRequest' | 'recordRejectedRequest' | 'recordTerminalStatus';
+  args: string[];
+  contractAddress: string;
+  chainId: number;
+  networkName: string;
+  expectedFromAddress: string;
+  expectedStatus: string;
+  createdAt: string;
+}
+
+export interface BlockchainOperationRow {
+  id: string;
+  requestId: string;
+  auditKey: string;
+  action: AnchorOperation['action'];
+  functionName: AnchorOperation['functionName'];
+  networkName: string;
+  chainId: number;
+  contractAddress: string;
+  transactionHash: string | null;
+  status: string;
+}
+
+export type RequestDecisionResult =
+  | { mode: 'DATABASE'; request: BloodRequest }
+  | { mode: 'ON_CHAIN'; operation: AnchorOperation; request: BloodRequest };
+
+export interface WalletChallenge {
+  challengeId: string;
+  walletAddress: string;
+  message: string;
+  expiresAt: string;
+  instructions: string[];
+}
+
+export interface WalletStatus {
+  bound: boolean;
+  walletAddress: string | null;
+  chainId: number | null;
+  verifiedAt: string | null;
+  /** Binding a wallet never grants on-chain verifier rights by itself. */
+  hasOnChainVerifierRole: boolean;
+  /**
+   * 'GRANTED'         – chain confirmed the role is held.
+   * 'NOT_GRANTED'     – chain confirmed the role is not held.
+   * 'UNAVAILABLE'     – role could not be checked (RPC error, no adapter).
+   * 'NOT_APPLICABLE'  – no wallet is bound or blockchain mode is disabled.
+   */
+  onChainRoleStatus: 'GRANTED' | 'NOT_GRANTED' | 'UNAVAILABLE' | 'NOT_APPLICABLE';
   note: string;
 }
 
