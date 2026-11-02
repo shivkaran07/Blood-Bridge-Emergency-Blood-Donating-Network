@@ -1,0 +1,37 @@
+{
+  "name": "@bloodbridge/contracts",
+  "private": true,
+  "version": "0.2.0",
+  "type": "module",
+  "description": "BloodBridge audit contract: tamper-evident anchors for authorized verification decisions.",
+  "scripts": {
+    "compile": "hardhat compile",
+    "test": "hardhat test",
+    "chain": "hardhat node",
+    "node": "hardhat node",
+    "deploy": "hardhat run scripts/deploy.ts --network hardhatLocal",
+    "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
+    "grant-verifier": "hardhat run scripts/grant-verifier.ts --network hardhatLocal",
+    "deploy:grant-verifier:sepolia": "hardhat run scripts/grant-verifier.ts --network sepolia",
+    "report": "hardhat run scripts/chain-report.ts --network hardhatLocal",
+    "sync-abi": "tsx scripts/sync-abi.ts",
+    "typecheck": "tsc --noEmit",
+    "clean": "rimraf artifacts cache types dist"
+  },
+  "dependencies": {
+    "@openzeppelin/contracts": "^5.6.1"
+  },
+  "devDependencies": {
+    "@nomicfoundation/hardhat-ethers": "^4.2.1",
+    "@nomicfoundation/hardhat-toolbox-mocha-ethers": "^4.0.0",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^24.10.1",
+    "chai": "^6.3.0",
+    "ethers": "^6.17.0",
+    "hardhat": "^3.21.0",
+    "mocha": "^12.0.0",
+    "rimraf": "^6.0.1",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.3"
+  }
+}
